@@ -16,6 +16,7 @@ import java.util.regex.Matcher;
 
 import ognl.Node;
 import ognl.Ognl;
+import ognl.OgnlContext;
 import ognl.OgnlException;
 import ognl.ParseException;
 
@@ -111,7 +112,11 @@ public class OberContext {
 		
 		if (arg instanceof Node) {
 			try {
-				return String.valueOf(Ognl.getValue(arg, this));
+				OgnlContext oc = (OgnlContext) Ognl.createDefaultContext(this);
+
+				sourceViewer.ober.addProperties(oc);
+				oc.put("ober", sourceViewer.ober);
+				return String.valueOf(Ognl.getValue(arg, oc, this));
 			} catch (OgnlException e) {
 				sourceViewer.error(e);
 			}

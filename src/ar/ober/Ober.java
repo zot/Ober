@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import ar.ober.swing.OberSwingGui;
 import ar.ognl.OgnlScript;
 
 import ognl.Node;
@@ -50,13 +51,30 @@ public class Ober {
 	public static Ober current;
 	
 	public static void main(String args[]) throws Exception {
-		if (args.length != 1)  {
-			System.err.println("Usage: " + Ober.class + " gui_class [file]");
+		OberGui gui = null;
+		String file = null;
+
+		if (args.length > 2)  {
+			System.err.println("Usage: " + Ober.class + " [gui_class] [file]");
 			System.exit(1);
 		}
-		OberGui gui = (OberGui) Class.forName(args[0]).newInstance();
+		if (args.length == 0) {
+			gui = new OberSwingGui();			
+		}
+		if (gui == null) {
+			try {
+				gui = (OberGui) Class.forName(args[0]).newInstance();
+				if (args.length == 2) {
+					file = args[1];
+				}
+			} catch (ClassNotFoundException ex) {
+				gui = new OberSwingGui();
+			}
+		} else if (args.length == 1) {
+			file = args[0];
+		}
 		Ober ober = new Ober(gui);
-		OberViewer main = ober.createMain(args.length < 2 ? null : args[1]);
+		OberViewer main = ober.createMain(file);
 
 		ober.help(main);
 		gui.dispatch();
@@ -64,11 +82,19 @@ public class Ober {
 	public Ober(OberGui g) {
 		gui = g;
 		current = this;
+		gui.setOber(this);
 		g.install();
 		initialize();
 	}
 	public HashMap getProperties() {
 		return properties;
+	}
+	public void addProperties(OgnlContext oc) {
+		for (Iterator i = properties.keySet().iterator(); i.hasNext(); ) {
+			Object key = i.next();
+
+			oc.put(key, properties.get(key));
+		}
 	}
 	public void executeShellCommand(final OberContext ctx)  {
 		final OberViewer viewer = getActiveViewer();

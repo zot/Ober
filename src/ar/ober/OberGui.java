@@ -9,4 +9,8 @@ public abstract class OberGui {
 	public abstract void dying();
 	public abstract String eventString(Object event);
 	public abstract String eventString(int modifiers, int keycode);
+
+	public void setOber(Ober o) {
+		ober = o;
+	}
 }

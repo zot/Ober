@@ -196,6 +196,8 @@ public class OberLayout implements LayoutManager2 {
 		positions[maxIndex] = (positions[maxIndex] + (maxIndex == components.size() - 1 ? 1 : positions[maxIndex + 1])) / 2;
 		container.add(child.getWrapper(), new Float(old));
 		child.setParentViewer(viewer);
+		container.getParent().invalidate();
+		child.getWrapper().getTopLevelAncestor().validate();
 	}
 	public void insert(OberSwingViewer child, Container container, Point point) {
 		container.add(child.getWrapper(), new Float(vertical ? point.y / (float)container.getHeight() : point.x / (float)container.getWidth()));
