@@ -31,7 +31,7 @@ public class OberContext {
 	public OberContext(OberViewer viewer, int pos, String str) {
 		sourceViewer = viewer;
 		doc = str;
-		cmdStart = pos;
+		nextPosition = cmdStart = pos;
 	}
 	public OberContext findArgs()  {
 		return findArgs(cmdStart);
@@ -117,6 +117,18 @@ public class OberContext {
 			}
 		}
 		return arg == null ? null : arg.toString();
+	}
+	public Object getArgumentObject(int i) {
+		Object arg = getArgument(i);
+		
+		if (arg instanceof Node) {
+			try {
+				return Ognl.getValue(arg, this);
+			} catch (OgnlException e) {
+				sourceViewer.error(e);
+			}
+		}
+		return arg;
 	}
 	public OberViewer getSourceViewer() {
 		return sourceViewer;

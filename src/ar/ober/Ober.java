@@ -13,15 +13,18 @@ package ar.ober;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
+import ar.ognl.OgnlScript;
+
 import ognl.Node;
 import ognl.Ognl;
+import ognl.OgnlContext;
 
 public class Ober {
 	public ArrayList viewers = new ArrayList();
@@ -30,6 +33,7 @@ public class Ober {
 	protected HashMap namespaces = new HashMap();
 	protected HashSet boundKeys = new HashSet();
 	public OberGui gui;
+	public String longListingFormat = "{\"ls\", \"-l\", \"[sourceViewer.ober.backslashify(#filename.toString())]\"}";
 	
 	public static final int MAIN_COLOR = 0xFFFFFF;
 	public static final int TRACK_COLOR = 0xC0FFFF;
@@ -70,7 +74,7 @@ public class Ober {
 		File dir;
 			
 		try  {
-			dir = new File(viewer.getFilename()[1]);
+			dir = viewer.getFile();
 			if (!dir.isDirectory())  {
 				dir = dir.getParentFile();
 			}
@@ -78,7 +82,6 @@ public class Ober {
 			dir = new File(".");
 		}
 		try {
-			final boolean atEnd = viewer.getCaretPosition() == viewer.getDocumentLength();
 			int start = ctx.cmdStart;
 			StringBuffer cmd = new StringBuffer();
 
@@ -106,35 +109,8 @@ public class Ober {
 			} else  {
 				viewer.insertString(viewer.getDocumentLength(), cmd.toString() + "\n", OberViewer.BOLD);
 			}
-			int pos = viewer.getDocumentLength();
-			
-			final Process proc = Runtime.getRuntime().exec(cmd.toString(), new String[] {ENV_OBERVAR, ENV_TRUE}, dir);
-			
-			new Thread() {
-				public void run() {
-					InputStream in = proc.getInputStream();
-					byte buf[] = new byte[1024];
-					int count;
-					
-					try {
-						while ((count = in.read(buf)) != -1)  {
-							viewer.insertString(-1, new String(buf, 0, count), null);
-						}
-						viewer.insertString(-1, "\n> !", OberViewer.BOLD);
-						if (atEnd)  {
-							viewer.setCaretPosition(viewer.getDocumentLength());
-						}
-					} catch (Exception e) {
-						ctx.getSourceViewer().error(e);
-					} finally  {
-						try {
-							in.close();
-						} catch (IOException e) {
-							getActiveViewer().error(e);
-						}
-					}
-				}
-			}.start();
+			viewer.process = Runtime.getRuntime().exec(cmd.toString(), new String[] {ENV_OBERVAR, ENV_TRUE}, dir);
+			viewer.insertInBackground(new InputStreamReader(viewer.process.getInputStream()), "\n> !", viewer.getCaretPosition() == viewer.getDocumentLength(), false);
 		} catch (Exception e) {
 			ctx.getSourceViewer().error(e);
 		}
@@ -143,7 +119,7 @@ public class Ober {
 		OberViewer tv = OberViewer.createTextViewer(this, sourceViewer.widestTrack());
 		ArrayList spaces = new ArrayList();
 		
-		tv.setTagText(tv.getTagText() + " Del, Help, Split, Detach");
+		tv.setTagText("Help: Del, Help, Split, Detach");
 		tv.setText("Welcome to Ober, version " + VERSION + ", an Oberon environment for Java.\n\n" +			"EXECUTING COMMANDS\n" +
 			"To execute a command, position the mouse pointer over a word and click the third mouse " +			"button. If you do not have a three button mouse, use the second button.\n\n" +			"COMMAND ARGUMENTS\n" +			"Arguments are either words or OGNL expressions (http://www.ognl.org/) within square " +			"brackets (example: Echo [3 + 4]).  The reciever is the viewer containing the command.\n\n" +			"OGNL PROPERTIES\n" +			"focus -- The viewer with keyboard focus\n" +			"ober -- the Ober environment\n" +			"properties -- user properties for the command viewer.\n" +			"ober.properties -- global user properties.\n\n" +			"OPENING FILES\n" +
 			"To open a file or a directory, type a filename and click it with the second mouse button.  If " +			"you do not have a three button mouse, control-click the filename instead.  Try one of these...\n" +
@@ -176,6 +152,11 @@ public class Ober {
 				executeShellCommand(ctx);
 			}
 		});
+		addCommand("System.Abort", new OberCommand(" -- Abort background process for the active viewer.") {
+			public void execute(OberContext ctx) throws InstantiationException, IllegalAccessException {
+				getActiveViewer().killBackgroundThread();
+			}
+		});
 		addCommand("System.Help", new OberCommand(" -- Show help on commands for a viewer.") {
 			public void execute(OberContext ctx) throws InstantiationException, IllegalAccessException {
 				help(ctx.getSourceViewer());
@@ -204,14 +185,16 @@ public class Ober {
 		});
 		addCommand("System.New", new OberCommand(" -- Create a new column.") {
 			public void execute(OberContext ctx) throws InstantiationException, IllegalAccessException {
-				String n[] = getActiveViewer() == null ? null : getActiveViewer().getFilename();
+				File current = getActiveViewer() == null ? new File("New") : getActiveViewer().getFile();
 				OberViewer v = OberViewer.createTextViewer(Ober.this, ctx.getSourceViewer().widestTrack());
-				File current = new File(n == null ? "New" : n[1]);
 
+				if (current == null) {
+					current = new File("New");
+				}
 				if (!current.isDirectory()) {
 					current = current.getParentFile();
 				}
-				v.setTagText("File: " + new File(current, "New").getAbsolutePath() + " Del, Help, Split, Detach");
+				v.setTagText("File: " + new File(current, "New").getAbsolutePath() + " Get, Put, Del, Help, Split, Detach");
 			}
 		});
 		addCommand("System.Split", new OberCommand(" -- Create another viewer on the same document.") {
@@ -242,6 +225,24 @@ public class Ober {
 		addCommand("System.Quit", new OberCommand(" -- Quit.") {
 			public void execute(OberContext ctx) {
 				System.exit(0);
+			}
+		});
+		addCommand("Text.Long", new OberCommand(" -- toggle verbosity of directory listing.") {
+			public void execute(OberContext ctx) {
+				try {
+					Object fn[] = ctx.getSourceViewer().getFilenameIndicator();
+					if (fn[1] instanceof String) {
+						OgnlContext oc = (OgnlContext) Ognl.createDefaultContext(ctx);
+						
+						oc.put("filename", ctx.getSourceViewer().getFile().getAbsolutePath());
+						ctx.getSourceViewer().setFileName("[" + new OgnlScript(longListingFormat).getValue(oc, ctx) + "]");
+					} else {
+						ctx.getSourceViewer().setFileName(ctx.getSourceViewer().getFile().getAbsolutePath());
+					}
+					ctx.getSourceViewer().loadFile();
+				} catch (Exception e) {
+					activeViewer.error(e);
+				}
 			}
 		});
 		addCommand("Text.Get", new OberCommand(" -- Get the contents of a file into the source viewer and track changes.") {
@@ -276,7 +277,7 @@ public class Ober {
 		});
 		addCommand("System.View", new OberCommand(" <filename> -- view a file, creating a new viewer if necessary.") {
 			public void execute(OberContext ctx) throws Exception {
-				ctx.getSourceViewer().findOrCreateViewerForFile(ctx.getArgumentString(1));
+				ctx.getSourceViewer().findOrCreateViewerForFile(getActiveViewer().filenameFor(ctx.getArgumentString(1)));
 			}
 		});
 		addCommand("System.Define", new OberCommand(" <OGNL expr> -- define a command as an OGNL expression.") {
@@ -293,7 +294,10 @@ public class Ober {
 			}
 		});
 	}
-	public void loadFile(String filename, OberViewer viewer) throws IOException {
+	public String backslashify(Object s) {
+		return s.toString();
+	}
+	public void loadFile(File filename, OberViewer viewer) throws IOException {
 		FileInputStream in = new FileInputStream(filename);
 		try {
 			byte buf[] = new byte[1024];
@@ -409,7 +413,7 @@ public class Ober {
 			File file = filename != null ? new File(filename) : new File(System.getProperty("user.home", System.getProperty("user.dir")), ".oberrc");
 
 			if (file.exists()) {
-				loadFile(file.getAbsolutePath(), v);
+				loadFile(file, v);
 			}
 		} catch (Exception ex) {
 			v.error(ex);
