@@ -1,4 +1,27 @@
+* 2003-06-18 - v0.9.5
 
+-- Improved Command System: Even More OO Than Before!
+
+Restructured command code to use new OberNamespaces.  Namespaces handle key bindings and command lookup.
+Each namespace can have a list of parents (which forms a DAG).  To lookup up a command, Ober first computes
+the inheritance list (placing common ancestors after their descendants in the list) and then walks it until it finds the
+command.  If none is found, Ober sends the "defaultCommand" message to each namespace in succession, until one
+of the messages returns true.  Key bindings are handled in a similar fashion.
+
+-- OberContext is now more accurate about finding commands
+
+-- OberContext now evaulates commands in the context of the context object, instead of the source viewer
+
+-- OberLayout now has a setPosition(OberViewer viewer, float position) method for more easily configuring viewers
+
+-- updated to OGNL version 2.5.1
+
+-- updated .oberrc on website to show how to make a "guide" track
+
+new commands:
+	System Default Command -- invokes a shell command with the arguments you clicked on.  If the first argument begins with a "!", 
+	System.Detach -- detach a split view from the original text document
+	System.Define <namespace.name> <description> <OGNL expr> -- define a new command (useful for autoloading)
 
 * 2003-03-21 - v0.9.4
 
