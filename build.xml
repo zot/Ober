@@ -21,7 +21,7 @@
 	<target name="build" depends="unpacklibs">
 		<jar destfile="${jarfile}" manifest="${manifest}" filesonly="true">
 			<!-- <fileset dir="${lib-classes}"/> -->
-			<fileset dir="${lib-classes}" includes="ognl/**"/>
+			<fileset dir="${lib-classes}" includes="org/mozilla/**"/>
 			<fileset dir="${ober-classes}"/>
 			<fileset dir="." includes="${ober-docs}/**"/>
 			<fileset dir="${ober-src}" includes="**/*.java"/>
