@@ -23,9 +23,14 @@
 	<a href="http://appliedreasoning.com/products_what_is_Classic_Blend.htm">Classic Blend</a>.  It only required one line of
 	Java code for each command I added
 	to Ober and a very small method to create a viewer for the protocol analyzer.  Note that this shows how to integrate command-line behavior
-	into a graphical front end.  The "Forward" command takes three arguments.  You just edit them in the "tab" for the viewer and then click on
+	into a graphical front end.  The "Forward" command takes three arguments.  You just edit them in the "tag" for the viewer and then click on
 	"Forward" to add a new forwarding listener to the analyzer.
 	<p><img src="images/analyzer.jpg">
+	<p>Here are the entries in my .oberrc to integrate the analyzer...<pre>
+		Exec [topViewer().getTag().setText(topViewer().getTag().getText() + ", NDT.Show, /home/bill/.oberrc")]
+		Exec [@ar.i12n.GuiMonitor@addNdtCommands(ober)]
+	</pre>
+	<p>The first line adds the NDT.Show command to the top tag in the window and the second command adds the NDT namespace to Ober.
 	<p>Here is the code that I used to integrate the anaylyzer into Ober...<pre>
 	
 	public static OberViewer currentViewer;
@@ -74,15 +79,17 @@
 		});
 	}
 	
-	public OberViewer createViewer(Ober ober) {
+	public static OberViewer createViewer(Ober ober) {
 		if (currentViewer == null) {
+			GuiMonitor mon = new GuiMonitor();
 			currentViewer = new OberViewer(ober) {
 				public void dying() {}
 			};
-			Component comp = createComponent();
+			Component comp = mon.createComponent();
 			currentViewer.getTag().setText("NDT: Disconnect, Clear, Listen 8080, Forward 55557 127.0.0.1 12345");
 			currentViewer.setComponent(comp, comp);
-			currentViewer.setProperty("ndt", this);
+			currentViewer.setProperty("ndt", mon);
+			mon.startNoGui();
 		}
 		return currentViewer;
 	}
