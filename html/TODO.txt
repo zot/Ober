@@ -1,6 +1,12 @@
-namespaces: Recalc
+commands
+	Detach -- detach a viewer that was split off of another (copy the document's contents)
+
+file opening
+	Handle absolute file names
 
 keybinding: ctrl-s
+
+namespaces: Recalc
 
 dragging for command execution
 
