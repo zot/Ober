@@ -2,11 +2,11 @@
 	<property name="build-dir" value="/tmp/Ober-build"/>
 	<property name="lib-dir" value="lib"/>
 	<property name="lib-classes" value="${build-dir}/classes"/>
-	<property name="eclipse-bin" value="bin"/>
 	<property name="jarfile" value="${build-dir}/ober.jar"/>
 	<property name="manifest" value="deploy/Manifest.txt"/>
 	<property name="ober-src" value="src"/>
-	<property name="ober-classes" value="${eclipse-bin}"/>
+	<property name="ober-classes" value="bin"/>
+	<property name="ober-docs" value="html"/>
 
 	<target name="unpacklibs">
 		<delete dir="${build-dir}"/>
@@ -22,6 +22,7 @@
 		<jar destfile="${jarfile}" manifest="${manifest}" filesonly="true">
 			<fileset dir="${lib-classes}"/>
 			<fileset dir="${ober-classes}"/>
+			<fileset dir="." includes="${ober-docs}/**"/>
 			<fileset dir="${ober-src}" includes="**/*.java"/>
 		</jar>
 	</target>
