@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin
+   id="OberPlugin"
+   name="Ober Plug-in"
+   version="1.0.0"
+   provider-name="Applied Reasoning"
+   class="OberPlugin.OberPlugin">
+
+   <runtime>
+      <library name="OberPlugin.jar">
+         <export name="*"/>
+      </library>
+      <library name="ober.jar"/>
+      <library name="ognl-2.5.1.jar"/>
+   </runtime>
+   <requires>
+      <import plugin="org.eclipse.core.resources"/>
+      <import plugin="org.eclipse.ui"/>
+   </requires>
+
+
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            name="Ober"
+            id="OberPlugin">
+      </category>
+      <view
+            name="Ober View"
+            icon="icons/sample.gif"
+            category="OberPlugin"
+            class="OberPlugin.views.OberView"
+            id="OberPlugin.views.OberView">
+      </view>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension
+            targetID="org.eclipse.ui.resourcePerspective">
+         <view
+               ratio="0.5"
+               relative="org.eclipse.ui.views.TaskList"
+               relationship="right"
+               id="OberPlugin.views.OberView">
+         </view>
+      </perspectiveExtension>
+   </extension>
+
+</plugin>
