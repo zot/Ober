@@ -1,0 +1,29 @@
+* 2003-03-20 - v0.9.3
+
+Ober.createMain() now reads in $HOME/.oberrc on startup
+
+new commands:
+	System.Split -- Create another viewer on the same document.
+	System.Exec <java expr> -- execute a java expression enclosed in square brackets (this really just retrieves the first argument as a string and discards it).
+	System.Load <filename> -- run commands in a file; each command should be on a separate line.
+	System.View <filename> -- view a file, creating a new viewer if necessary.
+
+better error handling so that commands can just throw Exception
+
+
+* 2003-03-19 - v0.9.2
+
+Ober now supports key bindings. There is only one for now: ctrl-enter executes the command at the beginning of the line.
+
+
+* 2003-03-14 - v0.9.1
+
+New features include:
+Colors for tags -- make it easier to distinguish viewers and tracks
+Namespaces
+Better location choosing for new viewers
+
+
+* 2003-03-12 - v0.9.0
+
+initial code
