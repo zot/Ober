@@ -1,0 +1,16 @@
+# comments begin with '#'
+   # You can precede them with whitespace
+
+Echo /home/bill/.oberrc
+
+# Exec [@java.lang.System@out.println("Load 'plugins' with Exec")]
+# example...
+# Exec [@my.plugin.Class@plugin(topViewer())]
+# calls this method in my.plugin.Class: public static void plug(OberViewer topViewer) {...}
+
+Echo hello
+Dur? -- this line prints a command not found error
+Echo one
+Din?
+Echo two
+Duh?

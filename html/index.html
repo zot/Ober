@@ -7,8 +7,10 @@
 	and <a href="http://www.cs.yorku.ca/~oz/wily/index.html">Wily</a>.
 	<p>Ober is a small extensible <a href="http://java.sun.com/products/jfc/">JFC</a> (Swing) framework that provides moveable and
 	resizeable views along with text file viewing/editing and a user command model, which integrates <a href="http://ognl.org">OGNL</a>
-	to handle embedded java expressions.  The command model supports namespaces and keyboard bindings.  I like to think of it as
-	<a href="http://eclipse.org">Eclipse</a> on a starvation diet.
+	to handle embedded java expressions (in the OGNL expressions, 'this' is the current viewer).  The command model supports namespaces
+	and keyboard bindings.  I like to think of it as <a href="http://eclipse.org">Eclipse</a> on a starvation diet.
+	<p>Since you can use OGNL to evaluate Java directly, you can extend Ober by simply placing extension code in your classpath and 
+	adding a command to your .oberrc file to hook it into the current Ober view. Here is a sample <a href=".oberrc">.oberrc</a> file.
 	<p>Here is the  <a href="http://sourceforge.net/projects/ober/">project</a>
 	<p>Here is a link to the <a href="http://sourceforge.net/project/showfiles.php?group_id=76070">downloads.</a>  It comes
 	in an executable jar, so just download it and double click it to see it go or run it from the command line (using "java -jar ober-0.9.1.jar"

@@ -15,12 +15,14 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.KeyboardFocusManager;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -46,7 +48,7 @@ public class Ober implements PropertyChangeListener {
 	public static final Color MAIN_COLOR = Color.WHITE;
 	public static final Color TRACK_COLOR = new Color((float)0.8, (float)1, (float)1);
 	public static final Color VIEWER_COLOR = new Color((float)0.8, (float)0.8, (float)0.8);
-
+	
 	public static void main(String args[]) {
 		Ober ober = new Ober();
 		OberViewer main = ober.createMain();
@@ -181,6 +183,11 @@ public class Ober implements PropertyChangeListener {
 				ctx.getSourceViewer().acceptViewer(createTextViewer());
 			}
 		});
+		addCommand("System.Split", new OberCommand(" -- Create another viewer on the same document.") {
+			public void execute(OberContext ctx) {
+				ctx.getSourceViewer().acceptViewer(createTextViewer((OberDocument)((JTextComponent)ctx.getSourceViewer().getComponent()).getDocument()));
+			}
+		});
 		addCommand("System.Del", new OberCommand(" -- Delete a viewer.") {
 			public void execute(OberContext ctx) {
 				OberViewer viewer = ctx.getSourceViewer();
@@ -223,7 +230,7 @@ public class Ober implements PropertyChangeListener {
 				}
 			}
 		});
-		addCommand("System.Echo", new OberCommand(" -- echo argument (example: Echo [3 + 4]).") {
+		addCommand("System.Echo", new OberCommand(" <arg> -- echo argument (example: Echo [3 + 4]).") {
 			public void execute(OberContext ctx) {
 				ctx.getSourceViewer().error(ctx.getArgumentString(1));
 			}
@@ -237,6 +244,45 @@ public class Ober implements PropertyChangeListener {
 				}
 			}
 		});
+		addCommand("System.Exec", new OberCommand(" <java expr> -- execute a java expression enclosed in square brackets (this really just retrieves the first argument as a string and discards it).") {
+			public void execute(OberContext ctx) {
+				ctx.getArgumentString(1);
+			}
+		});
+		addCommand("System.Load", new OberCommand(" <filename> -- run commands in a file; each command should be on a separate line.") {
+			public void execute(OberContext ctx) throws Exception {
+				loadFile(ctx.getSourceViewer().filenameFor(ctx.getArgumentString(1)), ctx.getSourceViewer());
+			}
+		});
+		addCommand("System.View", new OberCommand(" <filename> -- view a file, creating a new viewer if necessary.") {
+			public void execute(OberContext ctx) throws Exception {
+				ctx.getSourceViewer().findOrCreateViewerForFile(ctx.getArgumentString(1));
+			}
+		});
+	}
+	public void loadFile(String filename, OberViewer viewer) throws IOException {
+		FileInputStream in = new FileInputStream(filename);
+		try {
+			byte buf[] = new byte[1024];
+			StringBuffer str = new StringBuffer();
+			OberContext ctx;
+			
+			for (int count = in.read(buf); count > -1; count = in.read(buf)) {
+				str.append(new String(buf));
+			}
+			ctx = new OberContext(viewer, 0, str.toString());
+			for (;;) {
+				if (!ctx.isComment()) {
+					if (ctx.getArgumentString(0) == null) {
+						break;
+					}
+					executeCommand(ctx);
+				}
+				ctx.nextLine();
+			}
+		} finally {
+			in.close();
+		}
 	}
 	public void addNamespace(String space, String[] path) {
 		ArrayList l = new ArrayList();
@@ -298,7 +344,7 @@ public class Ober implements PropertyChangeListener {
 		return activeViewer;
 	}
 	public void executeCommand(OberContext ctx) {
-		if (!ctx.getArguments().isEmpty()) {
+		if (ctx.getArgumentString(0) != null) {
 			String prefix = ctx.getSourceViewer().getName();
 			String cmdName = ctx.getArgumentString(0);
 			OberCommand cmd = getCommand(cmdName);
@@ -315,7 +361,11 @@ public class Ober implements PropertyChangeListener {
 				}
 			}
 			if (cmd != null) {
-				cmd.execute(ctx);
+				try {
+					cmd.execute(ctx);
+				} catch (Exception ex) {
+					ctx.getSourceViewer().error(ex);
+				}
 			} else {
 				ctx.getSourceViewer().error("No command called '" + cmdName + "'");
 			}
@@ -345,9 +395,18 @@ public class Ober implements PropertyChangeListener {
 		v.setComponent(panel, panel);
 		v.getTag().setText("Ober: Newcol, New, Quit, Help");
 		v.getTag().setBackground(MAIN_COLOR);
+		try {
+			File file = new File(System.getProperty("user.home", System.getProperty("user.dir")), ".oberrc");
+
+			System.out.println("Loading file: " + file);
+			if (file.exists()) {
+				loadFile(file.getAbsolutePath(), v);
+			}
+		} catch (Exception ex) {
+			v.error(ex);
+		}
 		return v;
 	}
-
 	public OberViewer createTrack() {
 		OberViewer v = new OberViewer(OberViewer.TRACK_TYPE, this);
 		JPanel panel = new JPanel();
@@ -358,18 +417,34 @@ public class Ober implements PropertyChangeListener {
 		v.getTag().setBackground(TRACK_COLOR);
 		return v;
 	}
-
 	public OberViewer createTextViewer() {
-		final OberViewer v = new OberViewer(OberViewer.VIEWER_TYPE, this);
-		OberViewer.AdaptedTextPane txt = new OberViewer.AdaptedTextPane(v);
-	
-		v.setComponent(txt, new JScrollPane(txt));
-		v.getTag().setText("Viewer: Del, Help");
-		txt.addKeyListener(new KeyAdapter() {
-			public void keyPressed(KeyEvent e) {
-				v.markDirty();
+		return createTextViewer(new OberDocument());
+	}
+	public OberViewer cloneTextViewer(OberViewer viewer) {
+		return createTextViewer((OberDocument)((JTextComponent)viewer.getComponent()).getDocument());
+	}
+	public OberViewer createTextViewer(final OberDocument doc) {
+		final PropertyChangeListener listener[] = new PropertyChangeListener[1];
+		final OberViewer v = new OberViewer(OberViewer.VIEWER_TYPE, this) {
+			public void dying() {
+				super.dying();
+				doc.removePropertyListener(listener[0]);
 			}
-		});
+			public void createGui() {
+				super.createGui();
+			}
+		};
+		OberViewer.AdaptedTextPane txt = new OberViewer.AdaptedTextPane(v);
+
+		listener[0] = new PropertyChangeListener() {
+			public void propertyChange(PropertyChangeEvent evt) {
+				v.repaintDragger();
+			}
+		};
+		doc.addPropertyListener(listener[0]);
+		v.setComponent(txt, new JScrollPane(txt));
+		v.getTag().setText("Viewer: Del, Help, Split");
+		txt.setDocument(doc);
 		return v;
 	}
 	public boolean handleKey(OberViewer viewer, KeyEvent e) {
@@ -390,7 +465,11 @@ public class Ober implements PropertyChangeListener {
 				}
 			}
 			if (cmd != null) {
-				cmd.execute(new OberContext((JTextComponent)e.getSource(), viewer, ((JTextComponent)e.getSource()).getCaretPosition()));
+				try {
+					cmd.execute(new OberContext((JTextComponent)e.getSource(), viewer, ((JTextComponent)e.getSource()).getCaretPosition()));
+				} catch (Exception ex) {
+					viewer.error(ex);
+				}
 				return true;
 			}
 		}

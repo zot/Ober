@@ -1,14 +1,12 @@
-System commands: split (spawn a viewer with the same document -- tie the change indicators to the document, not the keyboard).
-
 namespaces: Recalc
+
+keybinding: ctrl-s
 
 dragging for command execution
 
 pattern searches:
 	anchor = [file]#[pat,]pat
 	pat = line.char | /regexp/
-
-read startup script at beginning
 
 make OberonLayout aware of minimumSize
 

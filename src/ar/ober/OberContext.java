@@ -25,7 +25,6 @@ import ognl.ParseException;
 import ar.ognl.OgnlScript;
 
 public class OberContext {
-	protected JTextComponent textComponent;
 	protected int cmdStart = 0;
 	protected int nextPosition = 0;
 	protected String doc;
@@ -33,18 +32,18 @@ public class OberContext {
 	protected OberViewer sourceViewer;
 	
 	public OberContext(MouseEvent e, JTextComponent component, OberViewer viewer) {
-		textComponent = component;
-		sourceViewer = viewer;
+		this(viewer, 0, component.getText());
 		findArgs(component.viewToModel(e.getPoint()));
 	}
 	public OberContext(JTextComponent component, OberViewer viewer, int pos) {
-		textComponent = component;
+		this(viewer, pos, component.getText());
+	}
+	public OberContext(OberViewer viewer, int pos, String str) {
 		sourceViewer = viewer;
-		doc = component.getText();
+		doc = str;
 		cmdStart = pos;
 	}
 	public void findArgs(int loc) {
-		doc = textComponent.getText();
 		Matcher m = OberViewer.LINE.matcher(doc);
 
 		while (m.find()) {
@@ -58,8 +57,8 @@ public class OberContext {
 				} while (nextPosition <= loc);
 				if (nextPosition - count[0] < loc) {
 					args.add(arg);
-					return;
 				}
+				return;
 			}
 		}
 		nextPosition = -1;
@@ -117,7 +116,7 @@ public class OberContext {
 		
 		if (arg instanceof Node) {
 			try {
-				return Ognl.getValue(arg, sourceViewer).toString();
+				return String.valueOf(Ognl.getValue(arg, sourceViewer));
 			} catch (OgnlException e) {
 				sourceViewer.error(e);
 			}
@@ -127,19 +126,31 @@ public class OberContext {
 	public OberViewer getSourceViewer() {
 		return sourceViewer;
 	}
-	protected void beginningOfLine() {
+	public void beginningOfLine() {
 		Matcher m = OberViewer.LINE.matcher(doc);
 
+		args.clear();
 		while (m.find()) {
 			if (m.start() <= cmdStart && m.end() >= cmdStart) {
 				Object arg;
 				int count[] = {0};
 
-				cmdStart = m.start();
-				nextPosition = cmdStart;
-				args.add(fetchArg(count));
+				nextPosition = cmdStart = m.start();
 				return;
 			}
 		}
+	}
+	public void nextLine() {
+		Matcher m = OberViewer.LINE.matcher(doc);
+
+		args.clear();
+		if (m.find(cmdStart + 1)) {
+			cmdStart = nextPosition = m.start();
+		} else {
+			nextPosition = -1;
+		}
+	}
+	public boolean isComment() {
+		return OberViewer.COMMENT_PATTERN.matcher(doc.substring(cmdStart)).lookingAt();
 	}
 }

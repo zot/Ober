@@ -10,7 +10,7 @@ License.txt for more information.
 package ar.ober;
 
 public abstract class OberCommand {
-	public abstract void execute(OberContext ctx);
+	public abstract void execute(OberContext ctx) throws Exception;
 	
 	protected String description;
 

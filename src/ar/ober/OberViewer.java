@@ -183,8 +183,6 @@ public class OberViewer {
 	protected OberViewer parentViewer;
 	protected ArrayList children = new ArrayList();
 	protected int type;
-	protected boolean trackChanges = false;
-	protected boolean dirty = false;
 	protected HashMap properties = new HashMap();
 
 	public static final int VIEWER_TYPE = 0;
@@ -194,12 +192,13 @@ public class OberViewer {
 	public static final String VIEWER_NAME = "^[a-zA-Z0-9_]+(?=:)";
 	public static final Pattern VIEWER_NAME_PATTERN = Pattern.compile(VIEWER_NAME);
 	//public static final String ARG = "(?<=^|[^a-zA-Z0-9_<>|!.:$])[a-zA-Z0-9_<>|!.:$]+(?=[^a-zA-Z0-9_<>|!.:$]|$)|\\[";
-	public static final String ARG = "([a-zA-Z0-9_<>|!.:$]|\\\\\\[)+|\\[";
+	public static final String ARG = "([a-zA-Z0-9_<>|!.:$/]|\\\\\\[)+|\\[";
 	public static final Pattern ARG_PATTERN = Pattern.compile(ARG);
 	public static final String FILE = "((?:[a-zA-Z]+://(?:[a-zA-Z0-9._\\-]+(?:(?::[a-zA-Z0-9._\\-]+)?@[a-zA-Z0-9._\\-]+)?)?)?)((?:[a-zA-Z]:)?[a-zA-Z0-9./\\\\_\\-:]+)(?:[^a-zA-Z0-9./\\\\_\\-:]|$)";
 	public static final Pattern FILE_PATTERN = Pattern.compile(FILE);
 	public static final String TAG_FILE = "File:\\s" + FILE;
 	public static final Pattern TAG_FILE_PATTERN = Pattern.compile(TAG_FILE);
+	public static final Pattern COMMENT_PATTERN = Pattern.compile("\\s*#");
 
 	public OberViewer(Ober o) {
 		this(VIEWER_TYPE, o);
@@ -416,6 +415,7 @@ public class OberViewer {
 			error("This type of viewer can't load or save files.");
 			return;
 		}
+		OberDocument doc = (OberDocument)((JTextComponent)component).getDocument();
 		File file = new File(getFilename()[1]);
 		FileInputStream fin = null;
 		StringBuffer str = new StringBuffer();
@@ -453,10 +453,10 @@ public class OberViewer {
 			}
 			int pos = ((JTextComponent)component).getCaretPosition();
 			((JTextComponent)component).setText(str.toString());
-			((JTextComponent)component).setCaretPosition(pos);
+			((JTextComponent)component).setCaretPosition(Math.min(pos, doc.getLength()));
+			doc.setTrackingChanges(true);
+			doc.markClean();
 		}
-		trackChanges = true;
-		markClean();
 	}
 	public void storeFile() {
 		if (!(component instanceof JTextComponent)) {
@@ -482,20 +482,19 @@ public class OberViewer {
 		}
 		markClean();
 	}
+	public boolean isDirty() {
+		return component instanceof AdaptedTextPane
+			&& ((AdaptedTextPane)component).getDocument() instanceof OberDocument
+			&& ((OberDocument)((AdaptedTextPane)component).getDocument()).isDirty();
+	}
 	public void markDirty() {
-		if (trackChanges && !dirty) {
-			dirty = true;
-			dragger.repaint();
-		}
+		((OberDocument)((AdaptedTextPane)component).getDocument()).markDirty();
 	}
 	public void markClean() {
-		if (trackChanges && dirty) {
-			dirty = false;
-			dragger.repaint();
-		}
+		((OberDocument)((AdaptedTextPane)component).getDocument()).markClean();
 	}
-	public boolean isDirty() {
-		return dirty;
+	public void repaintDragger() {
+		dragger.repaint();
 	}
 	// TODO factor out matching so we can do it line-by-line
 	// public Matcher findPattern(Pattern pat, )
@@ -507,20 +506,23 @@ public class OberViewer {
 		while (m.find()) {
 			if (m.start() <= loc && m.end() >= loc) {
 				String filename = viewer.filenameFor(txt.substring(m.start(2), m.end(2)));
-				OberViewer fileViewer = topViewer().findViewerForFile(filename);
-				
-				if (fileViewer == null) {
-					fileViewer = ober.createTextViewer();
-					fileViewer.tag.setText("File: " + filename + " Get, Put, Del, Help");
-					topViewer().acceptViewer(fileViewer);
-					fileViewer.loadFile();
-				}
-				fileViewer.getComponent().requestFocus();
+				findOrCreateViewerForFile(filename);
 				return;
 			}
 		}
 	}
-	protected String filenameFor(String string) {
+	public void findOrCreateViewerForFile(String filename) {
+		OberViewer fileViewer = topViewer().findViewerForFile(filename);
+		
+		if (fileViewer == null) {
+			fileViewer = ober.createTextViewer();
+			fileViewer.tag.setText("File: " + filename + " Get, Put, Del, Help, Split");
+			topViewer().acceptViewer(fileViewer);
+			fileViewer.loadFile();
+		}
+		fileViewer.getComponent().requestFocus();
+	}
+	public String filenameFor(String string) {
 		String parent[] = getFilename();
 		File f;
 		
