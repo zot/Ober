@@ -96,7 +96,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 		((StyledText)component).setText(txt);
 	}
 	public String getText(int start, int length) {
-		return ((StyledText)component).getText(start, length);
+		return ((StyledText)component).getText(start, start + length - 1);
 	}
 	public int getCaretPosition() {
 		return ((StyledText)component).getCaretOffset();
@@ -443,6 +443,66 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 						upListener.handleEvent(event);
 					}
 					break;
+			}
+		}
+	}
+	public void replace(final int start, final int end, final String str, final Object style) {
+		if (Display.getCurrent() == null) {
+			tag.getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					replace(start, end, str, style);
+				}
+			});
+		} else {
+			((StyledText)component).replaceTextRange(start, end - start, str);
+			if (style != null) {
+				StyleRange r = (StyleRange) ((StyleRange)style).clone();
+				
+				r.start = start;
+				r.length = str.length();
+				((StyledText)component).replaceStyleRanges(start, str.length(), new StyleRange[] {r});
+			} else {
+				((StyledText)component).replaceStyleRanges(start, str.length(), new StyleRange[0]);
+			}
+		}
+	}
+	public void setStyle(final int start, final int end, final Object style) {
+		if (Display.getCurrent() == null) {
+			tag.getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					setStyle(start, end, style);
+				}
+			});
+		} else {
+			if (style != null) {
+				StyleRange r = (StyleRange) ((StyleRange)style).clone();
+				
+				r.start = start;
+				r.length = end - start;
+				((StyledText)component).replaceStyleRanges(start, r.length, new StyleRange[] {r});
+			} else {
+				((StyledText)component).replaceStyleRanges(start, end - start, new StyleRange[0]);
+			}
+		}
+	}
+	public void removeStyle(final Object style) {
+		if (Display.getCurrent() == null) {
+			tag.getDisplay().asyncExec(new Runnable() {
+				public void run() {
+					removeStyle(style);
+				}
+			});
+		} else {
+			StyledText text = (StyledText)component;
+			OberSwtDocument doc = (OberSwtDocument) text.getContent();
+			StyleRange plain[] = new StyleRange[0];
+
+			for (int i = doc.getCharCount(); i-- > 0; ) {
+				StyleRange r = text.getStyleRangeAtOffset(i);
+				
+				if (r != null && r.similarTo((StyleRange) style)) {
+					text.replaceStyleRanges(i, 1, plain);
+				}
 			}
 		}
 	}

@@ -2,8 +2,8 @@
 <classpath>
     <classpathentry kind="src" path="src"/>
     <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-    <classpathentry kind="lib" path="lib/ognl-2.5.1.jar" sourcepath="lib/ognl-2.5.1.jar"/>
     <classpathentry kind="lib" path="lib/swt.jar" sourcepath="lib/swtsrc.zip"/>
     <classpathentry kind="lib" path="lib/swt-pi.jar" sourcepath="lib/swt-pisrc.zip"/>
+    <classpathentry kind="lib" path="lib/js-1.5r4.1.jar" sourcepath="lib/js-src-1.5r4.1.zip"/>
     <classpathentry kind="output" path="bin"/>
 </classpath>

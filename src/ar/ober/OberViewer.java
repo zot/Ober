@@ -36,6 +36,9 @@ public abstract class OberViewer {
 	public abstract int getCaretPosition();
 	public abstract int getDocumentLength();
 	public abstract void insertString(int pos, String str, Object style);
+	public abstract void replace(int start, int end, String str, Object style);
+	public abstract void setStyle(int start, int end, Object style);
+	public abstract void removeStyle(Object style);
 	public abstract void setCaretPosition(int pos);
 	public abstract void removeFromParent();
 	public abstract void requestFocus();
@@ -78,11 +81,15 @@ public abstract class OberViewer {
 	public static final Pattern COMMENT_PATTERN = Pattern.compile("\\s*#");
 	public static Object BOLD;
 	public static Object BOLD_RED;
+	public static Object CALC_VARIABLE;
+	public static Object CALC_NEW_VALUE;
+	public static Object CALC_OLD_VALUE;
+	public static Object PLAIN;
 	
 	public static OberViewer createTextViewer(Ober o, OberViewer parent) throws InstantiationException, IllegalAccessException  {
 		return createViewer(o, parent, VIEWER_TYPE);
 	}
-	public static OberViewer createViewer(Ober o, OberViewer parent, int type) throws InstantiationException, IllegalAccessException  {
+	public static OberViewer createViewer(Ober o, OberViewer parent, int type) {
 		OberViewer v = o.gui.createViewer();
 		
 		v.ober = o;
@@ -111,7 +118,7 @@ public abstract class OberViewer {
 	public void dying() {
 		ober.removeViewer(OberViewer.this);
 	}
-	public OberViewer widestTrack() throws InstantiationException, IllegalAccessException {
+	public OberViewer widestTrack() {
 		if (type != MAIN_TYPE) {
 			return parentViewer.widestTrack();
 		}

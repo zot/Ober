@@ -94,6 +94,10 @@ public class OberSwtGui extends OberGui {
 		display = Display.getDefault();
 		OberViewer.BOLD = new StyleRange(0, 0, Display.getDefault().getSystemColor(SWT.COLOR_BLACK), Display.getDefault().getSystemColor(SWT.COLOR_WHITE), SWT.BOLD);
 		OberViewer.BOLD_RED = new StyleRange(0, 0, Display.getDefault().getSystemColor(SWT.COLOR_RED), Display.getDefault().getSystemColor(SWT.COLOR_WHITE), SWT.BOLD);
+		OberViewer.CALC_VARIABLE = new StyleRange(0, 0, Display.getDefault().getSystemColor(SWT.COLOR_MAGENTA), Display.getDefault().getSystemColor(SWT.COLOR_WHITE), SWT.NORMAL);
+		OberViewer.CALC_NEW_VALUE = new StyleRange(0, 0, Display.getDefault().getSystemColor(SWT.COLOR_RED), Display.getDefault().getSystemColor(SWT.COLOR_WHITE), SWT.NORMAL);
+		OberViewer.CALC_OLD_VALUE = new StyleRange(0, 0, Display.getDefault().getSystemColor(SWT.COLOR_BLUE), Display.getDefault().getSystemColor(SWT.COLOR_WHITE), SWT.NORMAL);
+		OberViewer.PLAIN = new StyleRange(0, 0, Display.getDefault().getSystemColor(SWT.COLOR_BLACK), Display.getDefault().getSystemColor(SWT.COLOR_WHITE), SWT.NORMAL);
 		synchronized (this) {
 			notify();
 		}

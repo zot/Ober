@@ -35,6 +35,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
+import javax.swing.text.AbstractDocument;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
@@ -254,7 +255,7 @@ public class OberSwingViewer extends OberViewer {
 	public int getWidth()  {
 		return wrapper.getWidth();
 	}
-	protected void insertViewer(OberViewer v)  {
+	public void insertViewer(OberViewer v)  {
 		layout().insert((OberSwingViewer)v, (Container)component);
 		component.invalidate();
 		component.doLayout();
@@ -291,7 +292,7 @@ public class OberSwingViewer extends OberViewer {
 		((JTextComponent)component).setDocument(OberDocument.copy((OberDocument)((JTextComponent)component).getDocument()));
 		((OberDocument)((JTextComponent)component).getDocument()).addPropertyChangeListener(dragger);
 	}
-	protected void createGui() {
+	public void createGui() {
 		Dimension tabPref = tag.getPreferredSize();
 
 		(type == VIEWER_TYPE ? (JComponent)wrapper : tagPanel).setBorder(BorderFactory.createLineBorder(Color.GRAY));
@@ -345,7 +346,7 @@ public class OberSwingViewer extends OberViewer {
 				fr.dispose();
 			}
 		});
-		fr.setBounds(50, 50, 300, 300);
+		fr.setBounds(50, 50, 600, 400);
 		fr.getContentPane().setLayout(new BorderLayout());
 		fr.getContentPane().add(wrapper, BorderLayout.CENTER);
 		fr.setVisible(true);
@@ -354,6 +355,12 @@ public class OberSwingViewer extends OberViewer {
 		return (OberLayout)((Container)component).getLayout();
 	}
 	public void setComponent(Component comp, Component compWrapper) {
+		for (int i = wrapper.getComponents().length; i-- > 0; ) {
+			if (wrapper.getComponent(i) != tagPanel) {
+				wrapper.remove(wrapper.getComponent(i));
+				break;
+			}
+		}
 		component = comp;
 		wrapper.add(compWrapper, BorderLayout.CENTER);
 	}
@@ -402,5 +409,32 @@ public class OberSwingViewer extends OberViewer {
 	}
 	public void setPosition(float frac) {
 		((OberSwingViewer)parentViewer).layout().setPosition(this, frac);
+	}
+	public void replace(int start, int end, String str, Object style) {
+		JTextComponent text = (JTextComponent)component;
+		
+		try {
+			AbstractDocument doc = (AbstractDocument) text.getDocument();
+
+			doc.replace(start, end - start, str, (AttributeSet)style);
+		} catch (BadLocationException e) {
+			System.out.println("Error: ");
+			e.printStackTrace();
+			error(e);
+		}
+	}
+	public void removeStyle(Object style) {
+		OberDocument doc = (OberDocument)((JTextComponent)component).getDocument();
+		
+		for (int i = doc.getLength(); i-- > 0; ) {
+			AttributeSet att = doc.getCharacterElement(i).getAttributes();
+
+			if (att.containsAttributes((AttributeSet) style)) {
+				doc.setCharacterAttributes(i, 1, (AttributeSet) PLAIN, true);
+			}
+		}
+	}
+	public void setStyle(int start, int end, Object style) {
+		((OberDocument)((JTextComponent)component).getDocument()).setCharacterAttributes(start, end - start, (AttributeSet) style, true);
 	}
 }

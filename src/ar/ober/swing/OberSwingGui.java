@@ -23,6 +23,8 @@ public class OberSwingGui extends OberGui {
 	public static final HashMap awtEventTable = new HashMap();
 	public static EvtKey tmpkey = new EvtKey();
 	
+	public static final StyleContext STYLE_CONTEXT = new StyleContext();
+	
 	public static class EvtKey  {
 		int modifiers;
 		int key;
@@ -98,11 +100,18 @@ public class OberSwingGui extends OberGui {
 		KeyboardFocusManager.getCurrentKeyboardFocusManager().removePropertyChangeListener(focusListener);
 	}
 	public void install() {
-		StyleContext STYLE_CONTEXT = new StyleContext();
+		OberViewer.PLAIN = STYLE_CONTEXT.addStyle("PLAIN", null);
 		OberViewer.BOLD = STYLE_CONTEXT.addStyle("BOLD", null);
 		OberViewer.BOLD_RED = STYLE_CONTEXT.addStyle("BOLD_RED", (Style)OberViewer.BOLD);
+		OberViewer.CALC_VARIABLE = STYLE_CONTEXT.addStyle("CALC_VAR", null);
+		OberViewer.CALC_NEW_VALUE = STYLE_CONTEXT.addStyle("CALC_NEW", null);
+		OberViewer.CALC_OLD_VALUE = STYLE_CONTEXT.addStyle("CALC_OLD", null);
 		StyleConstants.setBold((Style)OberViewer.BOLD, true);
-		StyleConstants.setForeground((Style)OberViewer.BOLD_RED, new Color(Ober.RED));
+		StyleConstants.setForeground((Style)OberViewer.BOLD_RED, new Color(Ober.RED));StyleConstants.setForeground((Style)OberViewer.BOLD_RED, new Color(Ober.RED));
+		StyleConstants.setForeground((Style)OberViewer.CALC_VARIABLE, Color.MAGENTA);
+		StyleConstants.setForeground((Style)OberViewer.CALC_NEW_VALUE, Color.RED);
+		StyleConstants.setForeground((Style)OberViewer.CALC_OLD_VALUE, Color.BLUE);
+		StyleConstants.setForeground((Style)OberViewer.PLAIN, Color.BLACK);
 		focusListener = new PropertyChangeListener() {
 			public void propertyChange(PropertyChangeEvent evt) {
 				for (int i = 0; i < Ober.current.viewers.size(); i++) {

@@ -20,15 +20,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import ar.javascript.JsExpr;
+import ar.javascript.JsString;
+import ar.ober.calc.OberCalc;
+import ar.ober.calc.OberCalcResults;
 import ar.ober.swing.OberSwingGui;
-import ar.ognl.OgnlScript;
-
-import ognl.Node;
-import ognl.Ognl;
-import ognl.OgnlContext;
 
 public class Ober {
+	public static final String SHELL_CMD = "SHELL_CMD";
 	public ArrayList viewers = new ArrayList();
 	protected OberViewer activeViewer;
 	protected HashMap properties = new HashMap();
@@ -36,6 +38,7 @@ public class Ober {
 	protected HashSet boundKeys = new HashSet();
 	public OberGui gui;
 	public String longListingFormat = "{\"ls\", \"-l\", \"[sourceViewer.ober.backslashify(#filename.toString())]\"}";
+	public Pattern promptPattern = Pattern.compile("^> *");
 	
 	public static final int MAIN_COLOR = 0xFFFFFF;
 	public static final int TRACK_COLOR = 0xC0FFFF;
@@ -89,11 +92,11 @@ public class Ober {
 	public HashMap getProperties() {
 		return properties;
 	}
-	public void addProperties(OgnlContext oc) {
+	public void addProperties(JsExpr expr) {
 		for (Iterator i = properties.keySet().iterator(); i.hasNext(); ) {
 			Object key = i.next();
 
-			oc.put(key, properties.get(key));
+			expr.put((String)key, properties.get(key));
 		}
 	}
 	public void executeShellCommand(final OberContext ctx)  {
@@ -111,17 +114,14 @@ public class Ober {
 		try {
 			int start = ctx.cmdStart;
 			StringBuffer cmd = new StringBuffer();
-
+			if (properties.get(SHELL_CMD) != null) {
+				cmd.append(properties.get(SHELL_CMD));
+			}
 			if (ctx.getArgument(0).toString().startsWith("!"))  {
 				ctx.nextLine();
-				int nl = ctx.nextPosition;
+				int nl = ctx.nextPosition == -1 ? ctx.doc.length() : ctx.nextPosition;
 				int i = 0;
 
-				if (nl == -1)  {
-					nl = viewer.getDocumentLength();
-				} else  {
-					nl--;
-				}
 				ctx.findArgs(start);
 				cmd.append(ctx.getArgumentString(i++).substring(1));
 				while (ctx.nextPosition < nl && ctx.nextPosition != -1 && ctx.getArgument(i) != null) {
@@ -132,6 +132,7 @@ public class Ober {
 				cmd.append(ctx.getArgumentString(0));
 			}
 			if (ctx.nextPosition == -1 || ctx.nextPosition == viewer.getDocumentLength())  {
+				ctx.nextPosition = viewer.getDocumentLength();
 				viewer.insertString(viewer.getDocumentLength(), "\n", null);
 			} else  {
 				viewer.insertString(viewer.getDocumentLength(), cmd.toString() + "\n", OberViewer.BOLD);
@@ -170,7 +171,14 @@ public class Ober {
 		addNamespace("Errors", new String[]{"Text"});
 		bindKey("System", KMASK_CTRL, KEY_ENTER, new OberCommand(" -- execute command on line.") {
 			public void execute(OberContext ctx) {
+				Matcher m;
+
+System.out.println("cmdStart = " + ctx.cmdStart + ", nextPos = " + ctx.nextPosition);
 				ctx.beginningOfLine();
+				m = promptPattern.matcher(ctx.doc.substring(ctx.cmdStart));
+				if (m.find()) {
+					ctx.setStart(ctx.cmdStart + m.end());
+				}
 				executeCommand(ctx);
 			}
 		});
@@ -180,7 +188,7 @@ public class Ober {
 			}
 		});
 		addCommand("System.Abort", new OberCommand(" -- Abort background process for the active viewer.") {
-			public void execute(OberContext ctx) throws InstantiationException, IllegalAccessException {
+			public void execute(OberContext ctx) {
 				getActiveViewer().killBackgroundThread();
 			}
 		});
@@ -190,7 +198,7 @@ public class Ober {
 			}
 		});
 		addCommand("System.Newcol", new OberCommand(" -- Create a new column.") {
-			public void execute(OberContext ctx) throws InstantiationException, IllegalAccessException {
+			public void execute(OberContext ctx) {
 				createTrack(ctx.getSourceViewer().topViewer());
 			}
 		});
@@ -259,10 +267,7 @@ public class Ober {
 				try {
 					Object fn[] = ctx.getSourceViewer().getFilenameIndicator();
 					if (fn[1] instanceof String) {
-						OgnlContext oc = (OgnlContext) Ognl.createDefaultContext(ctx);
-						
-						oc.put("filename", ctx.getSourceViewer().getFile().getAbsolutePath());
-						ctx.getSourceViewer().setFileName("[" + new OgnlScript(longListingFormat).getValue(oc, ctx) + "]");
+						ctx.getSourceViewer().setFileName("[" + new JsString(longListingFormat).getValue(ctx) + "]");
 					} else {
 						ctx.getSourceViewer().setFileName(ctx.getSourceViewer().getFile().getAbsolutePath());
 					}
@@ -309,15 +314,36 @@ public class Ober {
 		});
 		addCommand("System.Define", new OberCommand(" <OGNL expr> -- define a command as an OGNL expression.") {
 			public void execute(OberContext ctx) throws Exception {
-				final Node node = (Node) ctx.getArgument(3);
+				final JsExpr expr = (JsExpr)ctx.getArgument(3);
 				
-				if (node != null) {
+				if (expr != null) {
 					addCommand(ctx.getArgumentString(1), new OberCommand(ctx.getArgumentString(2)) {
 						public void execute(OberContext ctx2) throws Exception {
-							Ognl.getValue(node, ctx2);
+							expr.getValue(ctx2);
 						}
 					});
 				}
+			}
+		});
+		addCommand("Text.Calc", new OberCommand(" -- perform calculations and replace results into text.  For Example:\n\ta = 3\n\tb = 4\n\tc = 0\n\t{c = a * b}.  Execute Text.Calc") {
+			public void execute(OberContext ctx) throws Exception {
+				final OberViewer viewer = getActiveViewer();
+
+				viewer.removeStyle(OberViewer.CALC_VARIABLE);
+				viewer.removeStyle(OberViewer.CALC_NEW_VALUE);
+				viewer.removeStyle(OberViewer.CALC_OLD_VALUE);
+				//viewer.setCaretPosition(ctx.cmdStart);
+				new OberCalc(viewer.getText(0, viewer.getDocumentLength()), new OberCalcResults() {
+					public void replace(int start, int end, String str) {
+						viewer.replace(start, end, str, OberViewer.CALC_NEW_VALUE);
+					}
+					public void noChange(int start, int end) {
+						viewer.setStyle(start, end, OberViewer.CALC_OLD_VALUE);
+					}
+					public void variable(int start, int end) {
+						viewer.setStyle(start, end, OberViewer.CALC_VARIABLE);
+					}
+				});
 			}
 		});
 	}
@@ -433,10 +459,10 @@ public class Ober {
 		((OberNamespace)namespaces.get(parts[0])).addCommand(parts[1], cmd);
 	}
 
-	public OberViewer createMain(String filename) throws InstantiationException, IllegalAccessException {
+	public OberViewer createMain(String filename) {
 		OberViewer v = OberViewer.createViewer(this, null, OberViewer.MAIN_TYPE);
 
-		v.setTagText("Ober: Newcol, New, Quit, Help");
+		v.setTagText("Ober: Newcol, New, Text.Calc, Quit, Help");
 		v.setTagBackground(MAIN_COLOR);
 		try {
 			File file = filename != null ? new File(filename) : new File(System.getProperty("user.home", System.getProperty("user.dir")), ".oberrc");
@@ -449,7 +475,7 @@ public class Ober {
 		}
 		return v;
 	}
-	public OberViewer createTrack(OberViewer main) throws InstantiationException, IllegalAccessException {
+	public OberViewer createTrack(OberViewer main) {
 		OberViewer v = OberViewer.createViewer(this, main, OberViewer.TRACK_TYPE);
 
 		v.setTagText("Track: Delcol, New, Help");
@@ -470,7 +496,7 @@ public class Ober {
 				namespace = (OberNamespace) namespaces.get("System");
 			}
 			try {
-				return namespace.handleKey(evt, new OberContext(viewer, viewer.inTag(e) ? viewer.getTagCaretPosition() : viewer.getCaretPosition(), viewer.inTag(e) ? viewer.getTagText() : viewer.getText(0, viewer.getDocumentLength() - 1)));
+				return namespace.handleKey(evt, new OberContext(viewer, viewer.inTag(e) ? viewer.getTagCaretPosition() : viewer.getCaretPosition(), viewer.inTag(e) ? viewer.getTagText() : viewer.getText(0, viewer.getDocumentLength())));
 			} catch (Exception ex) {
 				viewer.error(ex);
 			}

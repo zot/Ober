@@ -14,25 +14,19 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 
-import ognl.Node;
-import ognl.Ognl;
-import ognl.OgnlContext;
-import ognl.OgnlException;
-import ognl.ParseException;
-
-import ar.ognl.OgnlScript;
+import ar.javascript.JsExpr;
 
 public class OberContext {
-	protected int cmdStart = 0;
-	protected int nextPosition = 0;
-	protected String doc;
-	protected ArrayList args = new ArrayList();
-	protected OberViewer sourceViewer;
+	public int cmdStart = 0;
+	public int nextPosition = 0;
+	public String doc;
+	public ArrayList args = new ArrayList();
+	public OberViewer sourceViewer;
 	
 	public OberContext(OberViewer viewer, int pos, String str) {
 		sourceViewer = viewer;
 		doc = str;
-		nextPosition = cmdStart = pos;
+		nextPosition = cmdStart = pos >= str.length() ? str.length() - 1 : pos;
 	}
 	public OberContext findArgs()  {
 		return findArgs(cmdStart);
@@ -40,6 +34,7 @@ public class OberContext {
 	public OberContext findArgs(int loc) {
 		Matcher m = OberViewer.LINE.matcher(doc);
 
+		args.clear();
 		while (m.find()) {
 			if (m.start() <= loc && m.end() >= loc) {
 				Object arg;
@@ -66,11 +61,11 @@ public class OberContext {
 			if (m.find(nextPosition)) {
 				if (doc.charAt(m.start()) == '[') {
 					try {
-						Object expr = OgnlScript.parseExpr(doc.substring(m.start() + 1), count);
+						Object expr = new JsExpr(doc.substring(m.start() + 1));
 						count[0] += 2;
 						nextPosition = m.start() + count[0];
 						return expr;
-					} catch (ParseException e) {
+					} catch (Exception e) {
 						StringWriter buf = new StringWriter();
 									
 						buf.write("Error parsing arguments after '");
@@ -110,14 +105,14 @@ public class OberContext {
 	public String getArgumentString(int i) {
 		Object arg = getArgument(i);
 		
-		if (arg instanceof Node) {
+		if (arg instanceof JsExpr) {
 			try {
-				OgnlContext oc = (OgnlContext) Ognl.createDefaultContext(this);
+				JsExpr expr = (JsExpr) arg;
 
-				sourceViewer.ober.addProperties(oc);
-				oc.put("ober", sourceViewer.ober);
-				return String.valueOf(Ognl.getValue(arg, oc, this));
-			} catch (OgnlException e) {
+				sourceViewer.ober.addProperties(expr);
+				expr.put("ober", sourceViewer.ober);
+				return String.valueOf(expr.getValue(this));
+			} catch (Exception e) {
 				sourceViewer.error(e);
 			}
 		}
@@ -126,10 +121,10 @@ public class OberContext {
 	public Object getArgumentObject(int i) {
 		Object arg = getArgument(i);
 		
-		if (arg instanceof Node) {
+		if (arg instanceof JsExpr) {
 			try {
-				return Ognl.getValue(arg, this);
-			} catch (OgnlException e) {
+				return ((JsExpr)arg).getValue(this);
+			} catch (Exception e) {
 				sourceViewer.error(e);
 			}
 		}
@@ -140,26 +135,34 @@ public class OberContext {
 	}
 	public void beginningOfLine() {
 		Matcher m = OberViewer.LINE.matcher(doc);
+		int oldStart = cmdStart;
 
 		args.clear();
-		while (m.find()) {
-			if (m.start() <= cmdStart && m.end() >= cmdStart) {
-				Object arg;
-				int count[] = {0};
-
-				nextPosition = cmdStart = m.start();
-				return;
-			}
+		nextPosition = cmdStart = 0;
+		while (m.find() && m.start() <= oldStart) {
+			nextPosition = cmdStart = m.start();
 		}
 	}
+	public void setStart(int pos) {
+		args.clear();
+		nextPosition = cmdStart = pos;
+	}
+	// move nextPosition to the beginning of the next line
 	public void nextLine() {
 		Matcher m = OberViewer.LINE.matcher(doc);
 
+		nextPosition++;
 		args.clear();
-		if (m.find(nextPosition + 1)) {
-			cmdStart = nextPosition = m.start();
-		} else {
+		if (nextPosition >= doc.length()) {
 			nextPosition = -1;
+		} else if (!m.find(nextPosition)) {
+			if (nextPosition < doc.length() - 1 && doc.endsWith("\n")) {
+				nextPosition = doc.length() - 1;
+			} else {
+				nextPosition = -1;
+			}
+		} else {
+			cmdStart = nextPosition = m.start();
 		}
 	}
 	public boolean isComment() {
