@@ -1,0 +1,34 @@
+<project name="Ober" default="eclipse-build">
+	<property name="build-dir" value="/tmp/Ober-build"/>
+	<property name="lib-dir" value="lib"/>
+	<property name="lib-classes" value="${build-dir}/classes"/>
+	<property name="eclipse-bin" value="bin"/>
+	<property name="jarfile" value="${build-dir}/ober.jar"/>
+	<property name="manifest" value="deploy/Manifest.txt"/>
+	<property name="ober-src" value="src"/>
+	<property name="ober-classes" value="${eclipse-bin}"/>
+
+	<target name="unpacklibs">
+		<delete dir="${build-dir}"/>
+		<mkdir dir="${build-dir}"/>
+		<mkdir dir="${lib-classes}"/>
+		<unzip dest="${lib-classes}">
+			<fileset dir="${lib-dir}" includes="*.jar,*.zip"/>
+		</unzip>
+		<delete dir="${lib-classes}/META-INF"/>
+	</target>
+
+	<target name="build" depends="unpacklibs">
+		<jar destfile="${jarfile}" manifest="${manifest}" filesonly="true">
+			<fileset dir="${lib-classes}"/>
+			<fileset dir="${ober-classes}"/>
+			<fileset dir="${ober-src}" includes="**/*.java"/>
+		</jar>
+	</target>
+
+	<target name="eclipse">
+		<property name="compiled" value="true"/>
+	</target>
+	
+	<target name="eclipse-build" depends="eclipse,build"/>
+</project>
