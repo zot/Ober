@@ -1,4 +1,6 @@
-namespaces: Basic, Test, Meep, Recalc
+Add keyboard accelerators: ctrl-enter for execute
+
+namespaces: Recalc
 
 dragging for command execution
 
@@ -21,7 +23,3 @@ eclipse plugin?
 	'Menus' gives a viewer with the contents of the menus that Ober manages.
 	Lines are of the form: '<path> <Ober command string>'.
 	Get and Put commands treat the menus like a file (preserving order, etc).
-
-NDT
-	find-or-create the viewer.  Save the NDT viewer in a variable and hide it instead of deleting it.
-	NDT namespace

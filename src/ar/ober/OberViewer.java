@@ -21,9 +21,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +38,7 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.JTextPane;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
 public class OberViewer {
@@ -192,6 +197,7 @@ public class OberViewer {
 			}
 		});
 		tag.setText("Help");
+		tag.setBackground(Ober.VIEWER_COLOR);
 	}
 	public void dying() {
 		ober.removeViewer(OberViewer.this);
@@ -249,7 +255,7 @@ public class OberViewer {
 			ober.executeCommand(ctx);
 		}
 	}
-	protected JPanel getWrapper() {
+	public JPanel getWrapper() {
 		return wrapper;
 	}
 	public Tag getTag() {
@@ -283,12 +289,15 @@ public class OberViewer {
 		error(w.toString());
 	}
 	protected void error(String msg) {
-		OberViewer v = topViewer().findViewerNamed("Errors");
+		msg("Errors", msg);
+	}
+	protected void msg(String name, String msg) {
+		OberViewer v = topViewer().findViewerNamed(name);
 		
 		if (v == null) {
 			v = ober.createTextViewer();
-			v.setName("Errors");
-			acceptViewer(v);
+			v.setName(name);
+			topViewer().acceptViewer(v);
 		}
 		JTextPane text = (JTextPane)v.getComponent();
 		msg += "\n";
@@ -298,7 +307,7 @@ public class OberViewer {
 			e.printStackTrace();
 		}
 	}
-	protected OberViewer topViewer() {
+	public OberViewer topViewer() {
 		return type == MAIN_TYPE ? this : parentViewer == null ? null : parentViewer.topViewer();
 	}
 	protected OberViewer findViewerNamed(String string) {
@@ -361,18 +370,75 @@ public class OberViewer {
 		return null;
 	}
 	public void loadFile() {
-		String filename[] = getFilename();
-		
-		if (!(component instanceof JTextComponent)) {
-			error("This type of viewer can't load files.");
+		if (!(component instanceof JTextPane)) {
+			error("This type of viewer can't load or save files.");
+			return;
 		}
+		File file = new File(getFilename()[1]);
+		FileInputStream fin = null;
+		StringBuffer str = new StringBuffer();
+		byte buf[] = new byte[1024];
+	
+		if (file.exists()) {
+			if (file.isDirectory()) {
+				File files[] = file.listFiles();
+						
+				Arrays.sort(files);
+				for (int i = 0; i < files.length; i++) {
+					str.append(files[i].getName());
+					if (files[i].isDirectory()) {
+						str.append(File.separatorChar);
+					}
+					str.append('\n');
+				}
+			} else {
+				try {
+					fin = new FileInputStream(file);
+					for (int count = fin.read(buf); count > 0; count = fin.read(buf)) {
+						str.append(new String(buf, 0, count));
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				} finally {
+					try {
+						if (fin != null) {
+							fin.close();
+						}
+					} catch (IOException e1) {
+						e1.printStackTrace();
+					}
+				}
+			}
+			int pos = ((JTextComponent)component).getCaretPosition();
+			((JTextComponent)component).setText(str.toString());
+			((JTextComponent)component).setCaretPosition(pos);
+		}
+		trackChanges = true;
+		markClean();
 	}
 	public void storeFile() {
-		String filename[] = getFilename();
-		
 		if (!(component instanceof JTextComponent)) {
-			error("This type of viewer can't load files.");
+			error("This type of viewer can't load or save files.");
 		}
+		String filename[] = getFilename();
+		FileOutputStream fout = null;
+		Document doc = ((JTextComponent)component).getDocument();
+
+		try {
+			fout = new FileOutputStream(filename[1]);
+			fout.write(doc.getText(0, doc.getLength()).getBytes());
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (fout != null) {
+					fout.close();
+				}
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
+		}
+		markClean();
 	}
 	public void markDirty() {
 		if (trackChanges && !dirty) {
@@ -404,7 +470,7 @@ public class OberViewer {
 				if (fileViewer == null) {
 					fileViewer = ober.createTextViewer();
 					fileViewer.tag.setText("File: " + filename + " Get, Put, Del, Help");
-					viewer.acceptViewer(fileViewer);
+					topViewer().acceptViewer(fileViewer);
 					fileViewer.loadFile();
 				}
 				fileViewer.getComponent().requestFocus();
@@ -423,5 +489,11 @@ public class OberViewer {
 			f = new File(f.isDirectory() ? f : f.getParentFile(), string);
 		}
 		return f.getAbsolutePath() + (f.isDirectory() ? File.separator : "");
+	}
+	public void setProperty(String name, Object value) {
+		properties.put(name, value);
+	}
+	public Object getProperty(String name) {
+		return properties.get(name);
 	}
 }

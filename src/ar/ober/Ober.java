@@ -11,6 +11,7 @@ License.txt for more information.
 package ar.ober;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.KeyboardFocusManager;
@@ -20,20 +21,16 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Iterator;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
-import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
 public class Ober implements PropertyChangeListener {
@@ -41,6 +38,11 @@ public class Ober implements PropertyChangeListener {
 	protected OberViewer activeViewer;
 	protected HashMap commands = new HashMap();
 	protected HashMap properties = new HashMap();
+	protected HashMap namespaces = new HashMap();
+	
+	public static final Color MAIN_COLOR = Color.WHITE;
+	public static final Color TRACK_COLOR = new Color((float)0.8, (float)1, (float)1);
+	public static final Color VIEWER_COLOR = new Color((float)0.8, (float)0.8, (float)0.8);
 
 	public static void main(String args[]) {
 		Ober ober = new Ober();
@@ -57,35 +59,86 @@ public class Ober implements PropertyChangeListener {
 	}
 	public void help(OberViewer sourceViewer) {
 		OberViewer tv = createTextViewer();
-		ArrayList cmd = new ArrayList(commands.keySet());
 		StringBuffer buf = new StringBuffer("Welcome to Ober, an Oberon environment for Java.\n\n" +			"EXECUTING COMMANDS\n" +
 			"To execute a command, position the mouse pointer over a word and click the third mouse " +			"button. If you do not have a three button mouse, use the second button.\n\n" +			"COMMAND ARGUMENTS\n" +			"Arguments are either words or OGNL expressions (http://www.ognl.org/) within square " +			"brackets (example: Echo [3 + 4]).  The reciever is the viewer containing the command.\n\n" +			"OGNL PROPERTIES\n" +			"focus -- The viewer with keyboard focus\n" +			"ober -- the Ober environment\n" +			"properties -- user properties for the command viewer.\n" +			"ober.properties -- global user properties.\n\n" +			"OPENING FILES\n" +
 			"To open a file or a directory, type a filename and click it with the second mouse button.  If " +			"you do not have a three button mouse, control-click the filename instead.  Try one of these...\n" +
 			"\tC:\\\n" +
-			"\t/tmp\n\n" +			"AVAILABLE COMMANDS\n");
+			"\t/tmp\n\n" +			"AVAILABLE COMMANDS");
 
+		ArrayList spaces = new ArrayList();
+		for (Iterator i = namespaces.values().iterator(); i.hasNext(); ) {
+			ArrayList inh = new ArrayList((ArrayList)i.next());
+			ArrayList inhRev = new ArrayList();
+			
+			for (int j = inh.size(); j-- > 0; ) {
+				inhRev.add(inh.get(j));
+			}
+			spaces.add(inhRev);
+		}
+		Collections.sort(spaces, new Comparator() {
+			public int compare(Object o1, Object o2) {
+				return o1.toString().compareTo(o2.toString());
+			}
+			public boolean equals(Object obj) {
+				return true;
+			}
+		});
+		ArrayList cmd = new ArrayList(commands.keySet());
 		Collections.sort(cmd);
+		int namespace = 0;
+		String prevName = null;
+
 		for (int i = 0; i < cmd.size(); i++) {
+			String cmdSpace = ((String)cmd.get(i)).split("\\.")[0];
+
+			while (spaces.size() > namespace) {
+				ArrayList inh = (ArrayList)spaces.get(namespace);
+				String name = (String) inh.get(inh.size() - 1);
+
+				if (namespace == 0 || !prevName.equals(cmdSpace)) {
+					ArrayList space = (ArrayList) namespaces.get(name);
+
+					buf.append("\nNamespace: ");
+					buf.append(space.get(0));
+					buf.append(" path: ");
+					for (int j = 1; j < space.size(); j++) {
+						if (j > 1) {
+							buf.append(", ");
+						}
+						buf.append(space.get(j));
+					}
+					buf.append('\n');
+					prevName = name;
+					namespace++;
+				} else {
+					break;
+				}
+			}
+			buf.append("   ");
 			buf.append(cmd.get(i));
 			buf.append(((OberCommand)commands.get(cmd.get(i))).getDescription());
 			buf.append('\n');
 		}
 		((JTextPane)tv.component).setText(buf.toString());
-		sourceViewer.acceptViewer(tv);
+		sourceViewer.topViewer().acceptViewer(tv);
 	}
 	protected void initialize() {
 		KeyboardFocusManager.getCurrentKeyboardFocusManager().addPropertyChangeListener("focusOwner", this);
-		addCommand("Help", new OberCommand(" -- Show help on commands for a viewer.") {
+		addNamespace("System", new String[]{});
+		addNamespace("Text", new String[]{});
+		addNamespace("File", new String[]{"Text"});
+		addNamespace("Errors", new String[]{"Text"});
+		addCommand("System.Help", new OberCommand(" -- Show help on commands for a viewer.") {
 			public void execute(OberContext ctx) {
 				help(ctx.getSourceViewer());
 			}
 		});
-		addCommand("Newcol", new OberCommand(" -- Create a new column.") {
+		addCommand("System.Newcol", new OberCommand(" -- Create a new column.") {
 			public void execute(OberContext ctx) {
 				ctx.getSourceViewer().acceptViewer(createTrack());
 			}
 		});
-		addCommand("Delcol", new OberCommand(" -- Delete a column.") {
+		addCommand("System.Delcol", new OberCommand(" -- Delete a column.") {
 			public void execute(OberContext ctx) {
 				OberViewer track = ctx.getSourceViewer();
 
@@ -105,12 +158,12 @@ public class Ober implements PropertyChangeListener {
 				}
 			}
 		});
-		addCommand("New", new OberCommand(" -- Create a new column.") {
+		addCommand("System.New", new OberCommand(" -- Create a new column.") {
 			public void execute(OberContext ctx) {
 				ctx.getSourceViewer().acceptViewer(createTextViewer());
 			}
 		});
-		addCommand("Del", new OberCommand(" -- Delete a viewer.") {
+		addCommand("System.Del", new OberCommand(" -- Delete a viewer.") {
 			public void execute(OberContext ctx) {
 				OberViewer viewer = ctx.getSourceViewer();
 
@@ -129,26 +182,57 @@ public class Ober implements PropertyChangeListener {
 				}
 			}
 		});
-		addCommand("Quit", new OberCommand(" -- Quit.") {
+		addCommand("System.Quit", new OberCommand(" -- Quit.") {
 			public void execute(OberContext ctx) {
 				System.exit(0);
 			}
 		});
-		addCommand("Get", new OberCommand(" -- Get the contents of a file into the source viewer and track changes.") {
+		addCommand("Text.Get", new OberCommand(" -- Get the contents of a file into the source viewer and track changes.") {
 			public void execute(OberContext ctx) {
-				ctx.getSourceViewer().loadFile();
+				if (ctx.getSourceViewer().getComponent() instanceof JTextComponent) {
+					ctx.getSourceViewer().loadFile();
+				} else {
+					ctx.getSourceViewer().error("You can only get a file into a text viewer.");
+				}
 			}
 		});
-		addCommand("Put", new OberCommand(" -- Save the contents of the source viewer to a file and clear changes.") {
+		addCommand("Text.Put", new OberCommand(" -- Save the contents of the source viewer to a file and clear changes.") {
 			public void execute(OberContext ctx) {
-				ctx.getSourceViewer().storeFile();
+				if (ctx.getSourceViewer().getComponent() instanceof JTextComponent) {
+					ctx.getSourceViewer().storeFile();
+				} else {
+					ctx.getSourceViewer().error("You can only put a file from a text viewer.");
+				}
 			}
 		});
-		addCommand("Echo", new OberCommand(" -- echo argument (example: Echo [3 + 4]).") {
+		addCommand("System.Echo", new OberCommand(" -- echo argument (example: Echo [3 + 4]).") {
 			public void execute(OberContext ctx) {
 				ctx.getSourceViewer().error(ctx.getArgumentString(1));
 			}
 		});
+		addCommand("Text.Clear", new OberCommand(" -- set the viewer's contents to empty.") {
+			public void execute(OberContext ctx) {
+				if (ctx.getSourceViewer().getComponent() instanceof JTextComponent) {
+					((JTextComponent)ctx.getSourceViewer().getComponent()).setText("");
+				} else {
+					ctx.getSourceViewer().error("You can only clear a text viewer.");
+				}
+			}
+		});
+	}
+	public void addNamespace(String space, String[] path) {
+		ArrayList l = new ArrayList();
+		
+		l.add(space);
+		for (int i = 0; i < path.length; i++) {
+			if (!l.contains(path[i])) {
+				l.add(path[i]);
+			}
+		}
+		if (!l.contains("System")) {
+			l.add("System");
+		}
+		namespaces.put(space, l);
 	}
 	public OberViewer getFocus() {
 		return activeViewer;
@@ -197,16 +281,40 @@ public class Ober implements PropertyChangeListener {
 	}
 	public void executeCommand(OberContext ctx) {
 		if (!ctx.getArguments().isEmpty()) {
-			OberCommand cmd = (OberCommand)commands.get(ctx.getArgumentString(0));
-			
+			String prefix = ctx.getSourceViewer().getName();
+			String cmdName = ctx.getArgumentString(0);
+			OberCommand cmd = getCommand(cmdName);
+				
+			if (prefix != null) {
+				ArrayList path = (ArrayList)namespaces.get(prefix);
+
+				if (path == null && cmd == null) {
+					cmd = getCommand("System." + cmdName);
+				} else {
+					for (int i = 0; cmd == null && i < path.size(); i++) {
+						cmd = getCommand(path.get(i) + "." + cmdName);
+					}
+				}
+			}
 			if (cmd != null) {
 				cmd.execute(ctx);
 			} else {
-				ctx.getSourceViewer().error("No command called '" + ctx.getArgumentString(0) + "'");
+				ctx.getSourceViewer().error("No command called '" + cmdName + "'");
 			}
 		}
 	}
+	public OberCommand getCommand(String cmdName) {
+		return (OberCommand)commands.get(cmdName);
+	}
 	public void addCommand(String name, OberCommand cmd) {
+		String parts[] = name.split("\\.");
+		
+		if (parts.length != 2) {
+			throw new RuntimeException("Illegal command name format.  Expected: <name space>.<command name>, but got: " + name);
+		}
+		if (namespaces.get(parts[0]) == null) {
+			throw new RuntimeException("Illegal namespace: " + parts[0]);
+		}
 		commands.put(name, cmd);
 	}
 
@@ -218,6 +326,7 @@ public class Ober implements PropertyChangeListener {
 		panel.setLayout(new OberLayout(v, false));
 		v.setComponent(panel, panel);
 		v.getTag().setText("Ober: Newcol, New, Quit, Help");
+		v.getTag().setBackground(MAIN_COLOR);
 		return v;
 	}
 
@@ -228,77 +337,12 @@ public class Ober implements PropertyChangeListener {
 		panel.setLayout(new OberLayout(v, true));
 		v.setComponent(panel, panel);
 		v.getTag().setText("Track: Delcol, New, Help");
+		v.getTag().setBackground(TRACK_COLOR);
 		return v;
 	}
 
 	public OberViewer createTextViewer() {
-		final OberViewer v = new OberViewer(OberViewer.VIEWER_TYPE, this) {
-			public void loadFile() {
-				File file = new File(getFilename()[1]);
-				FileInputStream fin = null;
-				StringBuffer str = new StringBuffer();
-				byte buf[] = new byte[1024];
-	
-				if (file.exists()) {
-					if (file.isDirectory()) {
-						File files[] = file.listFiles();
-						
-						Arrays.sort(files);
-						for (int i = 0; i < files.length; i++) {
-							str.append(files[i].getName());
-							if (files[i].isDirectory()) {
-								str.append(File.separatorChar);
-							}
-							str.append('\n');
-						}
-					} else {
-						try {
-							fin = new FileInputStream(file);
-							for (int count = fin.read(buf); count > 0; count = fin.read(buf)) {
-								System.out.println("appending: " +  new String(buf, 0, count));
-								str.append(new String(buf, 0, count));
-							}
-						} catch (IOException e) {
-							e.printStackTrace();
-						} finally {
-							try {
-								if (fin != null) {
-									fin.close();
-								}
-							} catch (IOException e1) {
-								e1.printStackTrace();
-							}
-						}
-					}
-					int pos = ((JTextComponent)component).getCaretPosition();
-					((JTextComponent)component).setText(str.toString());
-					((JTextComponent)component).setCaretPosition(pos);
-				}
-				trackChanges = true;
-				markClean();
-			}
-			public void storeFile() {
-				String filename[] = getFilename();
-				FileOutputStream fout = null;
-				Document doc = ((JTextComponent)component).getDocument();
-	
-				try {
-					fout = new FileOutputStream(filename[1]);
-					fout.write(doc.getText(0, doc.getLength()).getBytes());
-				} catch (Exception e) {
-					e.printStackTrace();
-				} finally {
-					try {
-						if (fout != null) {
-							fout.close();
-						}
-					} catch (IOException e1) {
-						e1.printStackTrace();
-					}
-				}
-				markClean();
-			}
-		};
+		final OberViewer v = new OberViewer(OberViewer.VIEWER_TYPE, this);
 		OberViewer.AdaptedTextPane txt = new OberViewer.AdaptedTextPane(v);
 	
 		v.setComponent(txt, new JScrollPane(txt));
