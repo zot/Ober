@@ -1,3 +1,7 @@
+* For 1.0
+
+make OberonLayout aware of minimumSize
+
 commands
 	Detach -- detach a viewer that was split off of another (copy the document's contents)
 
@@ -6,6 +10,9 @@ file opening
 
 keybinding: ctrl-s
 
+
+* After 1.0
+
 namespaces: Recalc
 
 dragging for command execution
@@ -13,8 +20,6 @@ dragging for command execution
 pattern searches:
 	anchor = [file]#[pat,]pat
 	pat = line.char | /regexp/
-
-make OberonLayout aware of minimumSize
 
 reflection: Variables command shows a series of SetVariable commands which update 'Variables' views.
 
