@@ -151,7 +151,7 @@ public class OberContext {
 		Matcher m = OberViewer.LINE.matcher(doc);
 
 		args.clear();
-		if (m.find(cmdStart + 1)) {
+		if (m.find(nextPosition + 1)) {
 			cmdStart = nextPosition = m.start();
 		} else {
 			nextPosition = -1;

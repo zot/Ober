@@ -3,12 +3,17 @@ package OberPlugin;
 import org.eclipse.ui.plugin.*;
 import org.eclipse.core.runtime.*;
 import org.eclipse.core.resources.*;
+
+import ar.ober.Ober;
+
 import java.util.*;
 
 /**
  * The main plugin class to be used in the desktop.
  */
 public class OberPlugin extends AbstractUIPlugin {
+	public Ober ober;
+
 	//The shared instance.
 	private static OberPlugin plugin;
 	//Resource bundle.

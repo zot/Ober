@@ -2,6 +2,6 @@ Define System.Maximize [" -- maximize "] [@org.eclipse.ui.PlatformUI@getWorkbenc
 Define System.HideEditors [" -- hide editors"] [@org.eclipse.ui.PlatformUI@getWorkbench().getActiveWorkbenchWindow().getActivePage().setEditorAreaVisible(false)]
 Define System.ShowEditors [" -- show editors"] [@org.eclipse.ui.PlatformUI@getWorkbench().getActiveWorkbenchWindow().getActivePage().setEditorAreaVisible(true)]
 
-Maximize
-HideEditors
-ShowEditors
+# Maximize
+# HideEditors
+# ShowEditors

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.Reader;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.ST;
 import org.eclipse.swt.custom.StyleRange;
 import org.eclipse.swt.custom.StyledText;
 import org.eclipse.swt.events.DisposeEvent;
@@ -17,7 +18,6 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Point;
-import org.eclipse.swt.internal.SWTEventObject;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
@@ -25,6 +25,8 @@ import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Widget;
 
@@ -85,7 +87,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 		return tag.getCaretOffset();
 	}
 	public boolean inTag(Object event) {
-		return ((SWTEventObject)event).getSource() == tag;
+		return ((Event)event).widget == tag;
 	}
 	public int getWidth() {
 		return wrapper.getBounds().width;
@@ -179,10 +181,10 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 		}
 		((StyledText)component).setStyleRanges(newRanges);
 	}
-	protected void createGui() {
+	public void createGui() {
 		createGui(null, -1);
 	}
-	protected void createGui(Composite parent, float position) {
+	public void createGui(Composite parent, float position) {
 		FormLayout tagLayout = new FormLayout();
 		FormLayout wrapperLayout = new FormLayout();
 		FormData data;
@@ -204,7 +206,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 		ober.addViewer(this);
 		if (type != MAIN_TYPE)  {
 			dragger = new OberSwtDragger(this, tagPanel, 0);
-			tag = new StyledText(tagPanel, SWT.SINGLE);
+			tag = new OberStyledText(tagPanel, SWT.SINGLE);
 			data = new FormData();
 			data.left = new FormAttachment(0, 0);
 			data.top = new FormAttachment(0, 0);
@@ -219,7 +221,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 			data.height = SWT.DEFAULT;
 			tag.setLayoutData(data);
 		} else {
-			tag = new StyledText(tagPanel, SWT.SINGLE);
+			tag = new OberStyledText(tagPanel, SWT.SINGLE);
 			data = new FormData();
 			data.left = new FormAttachment(0, 0);
 			data.top = new FormAttachment(0, 0);
@@ -228,6 +230,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 			data.height = SWT.DEFAULT;
 			tag.setLayoutData(data);
 		}
+		bindKeys(tag);
 		tag.setData("tag");
 		tag.setText(" ");
 		//((FormData)tag.getLayoutData()).bottom = new FormAttachment(0, tag.getLineHeight() + 100 - tag.computeTrim(0, 0, 100, 100).height);
@@ -245,7 +248,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 			border.setData("text border");
 			border.setLayout(borderLayout);
 			border.addPaintListener(this);
-			StyledText txt = new StyledText(border, SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
+			StyledText txt = new OberStyledText(border, SWT.MULTI | SWT.WRAP | SWT.V_SCROLL);
 			OberSwtDocument doc = new OberSwtDocument(txt.getContent());
 			txt.setContent(doc);
 			txt.setBackground(txt.getDisplay().getSystemColor(SWT.COLOR_WHITE));
@@ -259,6 +262,7 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 			data.right = new FormAttachment(100, -1);
 			data.bottom = new FormAttachment(100, -1);
 			txt.setLayoutData(data);
+			bindKeys(txt);
 			cont = border;
 		} else  {
 			component = new Composite(wrapper, 0);
@@ -289,6 +293,11 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 		} else {
 			((OberSwtViewer)parentViewer).insertViewer(this, position);
 		}
+	}
+	protected void bindKeys(StyledText txt) {
+		txt.setKeyBinding(SWT.CONTROL | 'C', ST.COPY);
+		txt.setKeyBinding(SWT.CONTROL | 'V', ST.PASTE);
+		txt.setKeyBinding(SWT.CONTROL | 'X', ST.CUT);
 	}
 	protected void insertViewer(OberViewer v, float position) {
 		v.setParentViewer(this);
@@ -393,6 +402,29 @@ public class OberSwtViewer extends OberViewer implements PaintListener, MouseLis
 					superInsertSnippet(snippet);
 				}
 			});
+		}
+	}
+	public class OberStyledText extends StyledText implements Listener {
+		protected Listener listener;
+
+		public OberStyledText(Composite parent, int style) {
+			super(parent, style);
+			super.addListener(SWT.KeyDown, this);
+		}
+		public void addListener(int evtType, Listener l) {
+			if (evtType == SWT.KeyDown) {
+				listener = l;
+			} else {
+				super.addListener(evtType, l);
+			}
+		}
+		public void handleEvent(Event event) {
+			if (event.type != SWT.KeyDown || !ober.handleKey(OberSwtViewer.this, event)) {
+				System.out.println("Did not handle: " + event);
+				listener.handleEvent(event);
+			} else {
+				System.out.println("Handled: " + event);
+			}
 		}
 	}
 }

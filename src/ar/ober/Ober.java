@@ -13,6 +13,7 @@ package ar.ober;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -298,7 +299,9 @@ public class Ober {
 		return s.toString();
 	}
 	public void loadFile(File filename, OberViewer viewer) throws IOException {
-		FileInputStream in = new FileInputStream(filename);
+		loadFile(new FileInputStream(filename), viewer);
+	}
+	public void loadFile(InputStream in, OberViewer viewer) throws IOException {
 		try {
 			byte buf[] = new byte[1024];
 			StringBuffer str = new StringBuffer();
@@ -441,7 +444,7 @@ public class Ober {
 				namespace = (OberNamespace) namespaces.get("System");
 			}
 			try {
-				return namespace.handleKey(evt, new OberContext(viewer, viewer.inTag(e) ? viewer.getTagCaretPosition() : viewer.getCaretPosition(), viewer.inTag(e) ? viewer.getTagText() : viewer.getText(0, viewer.getDocumentLength())));
+				return namespace.handleKey(evt, new OberContext(viewer, viewer.inTag(e) ? viewer.getTagCaretPosition() : viewer.getCaretPosition(), viewer.inTag(e) ? viewer.getTagText() : viewer.getText(0, viewer.getDocumentLength() - 1)));
 			} catch (Exception ex) {
 				viewer.error(ex);
 			}

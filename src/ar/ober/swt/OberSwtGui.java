@@ -2,8 +2,8 @@ package ar.ober.swt;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.StyleRange;
-import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
 
 import ar.ober.OberGui;
 import ar.ober.OberViewer;
@@ -20,7 +20,7 @@ public class OberSwtGui extends OberGui {
 		return new OberSwtViewer();
 	}
 	public String eventString(Object event) {
-		return swtEventString(((KeyEvent)event).stateMask, ((KeyEvent)event).keyCode);
+		return swtEventString(((Event)event).stateMask, ((Event)event).keyCode);
 	}
 	public String swtEventString(int modifiers, int keycode) {
 		StringBuffer buf = new StringBuffer();
