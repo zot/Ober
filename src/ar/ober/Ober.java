@@ -35,6 +35,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.text.JTextComponent;
 
+import ognl.Node;
+import ognl.Ognl;
+
 public class Ober implements PropertyChangeListener {
 	protected ArrayList viewers = new ArrayList();
 	protected OberViewer activeViewer;
@@ -183,6 +186,15 @@ public class Ober implements PropertyChangeListener {
 				ctx.getSourceViewer().acceptViewer(createTextViewer((OberDocument)((JTextComponent)ctx.getSourceViewer().getComponent()).getDocument()));
 			}
 		});
+		addCommand("System.Detach", new OberCommand(" -- Create another viewer on the same document.") {
+			public void execute(OberContext ctx) throws Exception {
+				JTextComponent comp = (JTextComponent)ctx.getSourceViewer().getComponent();
+				
+				((OberDocument)comp.getDocument()).removePropertyChangeListener(ctx.getSourceViewer());
+				comp.setDocument(OberDocument.copy((OberDocument)comp.getDocument()));
+				((OberDocument)comp.getDocument()).addPropertyChangeListener(ctx.getSourceViewer());
+			}
+		});
 		addCommand("System.Del", new OberCommand(" -- Delete a viewer.") {
 			public void execute(OberContext ctx) {
 				OberViewer viewer = ctx.getSourceViewer();
@@ -252,6 +264,19 @@ public class Ober implements PropertyChangeListener {
 		addCommand("System.View", new OberCommand(" <filename> -- view a file, creating a new viewer if necessary.") {
 			public void execute(OberContext ctx) throws Exception {
 				ctx.getSourceViewer().findOrCreateViewerForFile(ctx.getArgumentString(1));
+			}
+		});
+		addCommand("System.Define", new OberCommand(" <OGNL expr> -- define a command as an OGNL expression.") {
+			public void execute(OberContext ctx) throws Exception {
+				final Node node = (Node) ctx.getArgument(3);
+				
+				if (node != null) {
+					addCommand(ctx.getArgumentString(1), new OberCommand(ctx.getArgumentString(2)) {
+						public void execute(OberContext ctx2) throws Exception {
+							Ognl.getValue(node, ctx2);
+						}
+					});
+				}
 			}
 		});
 	}
@@ -420,26 +445,17 @@ public class Ober implements PropertyChangeListener {
 		return createTextViewer((OberDocument)((JTextComponent)viewer.getComponent()).getDocument());
 	}
 	public OberViewer createTextViewer(final OberDocument doc) {
-		final PropertyChangeListener listener[] = new PropertyChangeListener[1];
 		final OberViewer v = new OberViewer(OberViewer.VIEWER_TYPE, this) {
 			public void dying() {
 				super.dying();
-				doc.removePropertyListener(listener[0]);
-			}
-			public void createGui() {
-				super.createGui();
+				doc.removePropertyChangeListener(this);
 			}
 		};
 		OberViewer.AdaptedTextPane txt = new OberViewer.AdaptedTextPane(v);
 
-		listener[0] = new PropertyChangeListener() {
-			public void propertyChange(PropertyChangeEvent evt) {
-				v.repaintDragger();
-			}
-		};
-		doc.addPropertyListener(listener[0]);
+		doc.addPropertyChangeListener(v);
 		v.setComponent(txt, new JScrollPane(txt));
-		v.getTag().setText("Viewer: Del, Help, Split");
+		v.getTag().setText("Viewer: Del, Help, Split, Detach");
 		txt.setDocument(doc);
 		return v;
 	}

@@ -116,12 +116,12 @@ public class OberContext {
 		
 		if (arg instanceof Node) {
 			try {
-				return String.valueOf(Ognl.getValue(arg, sourceViewer));
+				return String.valueOf(Ognl.getValue(arg, this));
 			} catch (OgnlException e) {
 				sourceViewer.error(e);
 			}
 		}
-		return (String)arg;
+		return arg == null ? null : arg.toString();
 	}
 	public OberViewer getSourceViewer() {
 		return sourceViewer;

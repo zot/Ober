@@ -21,6 +21,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -42,7 +44,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
-public class OberViewer {
+public class OberViewer implements PropertyChangeListener {
 	public static class ViewerEventAdaptor implements MouseListener, KeyListener {
 		protected ArrayList oldMouseListeners = new ArrayList();
 		protected ArrayList oldKeyListeners = new ArrayList();
@@ -216,6 +218,9 @@ public class OberViewer {
 	}
 	public Ober getOber() {
 		return ober;
+	}
+	public void propertyChange(PropertyChangeEvent evt) {
+		repaintDragger();
 	}
 	protected void createGui() {
 		Dimension tabPref = tag.getPreferredSize();

@@ -5,12 +5,15 @@ Echo /home/bill/.oberrc
 
 # Exec [@java.lang.System@out.println("Load 'plugins' with Exec")]
 # example...
-# Exec [@my.plugin.Class@plugin(topViewer())]
+# Exec [@my.plugin.Class@plugin(sourceViewer.topViewer())]
 # calls this method in my.plugin.Class: public static void plug(OberViewer topViewer) {...}
 
+Define System.Duh [" -- print duh"] [sourceViewer.error("duh")]
+
+Echo ["Printing duh..."]
+Duh
 Echo hello
-Dur? -- this line prints a command not found error
+Dur? -- this line also prints a command not found error
 Echo one
 Din?
 Echo two
-Duh?
