@@ -1,6 +1,6 @@
 * 2003-06-18 - v0.9.5
 
--- Improved Command System: Even More OO Than Before!
+-- Improved Command System: Now More OO Than Ever!
 
 Restructured command code to use new OberNamespaces.  Namespaces handle key bindings and command lookup.
 Each namespace can have a list of parents (which forms a DAG).  To lookup up a command, Ober first computes
