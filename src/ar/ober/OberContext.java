@@ -9,13 +9,10 @@ License.txt for more information.
 */
 package ar.ober;
 
-import java.awt.event.MouseEvent;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
-
-import javax.swing.text.JTextComponent;
 
 import ognl.Node;
 import ognl.Ognl;
@@ -31,19 +28,15 @@ public class OberContext {
 	protected ArrayList args = new ArrayList();
 	protected OberViewer sourceViewer;
 	
-	public OberContext(MouseEvent e, JTextComponent component, OberViewer viewer) {
-		this(viewer, 0, component.getText());
-		findArgs(component.viewToModel(e.getPoint()));
-	}
-	public OberContext(JTextComponent component, OberViewer viewer, int pos) {
-		this(viewer, pos, component.getText());
-	}
 	public OberContext(OberViewer viewer, int pos, String str) {
 		sourceViewer = viewer;
 		doc = str;
 		cmdStart = pos;
 	}
-	public void findArgs(int loc) {
+	public OberContext findArgs()  {
+		return findArgs(cmdStart);
+	}
+	public OberContext findArgs(int loc) {
 		Matcher m = OberViewer.LINE.matcher(doc);
 
 		while (m.find()) {
@@ -59,10 +52,11 @@ public class OberContext {
 					args.add(arg);
 					cmdStart = nextPosition - count[0];
 				}
-				return;
+				return this;
 			}
 		}
 		nextPosition = -1;
+		return this;
 	}
 	public Object fetchArg(int count[]) {
 		if (nextPosition > -1) {

@@ -2,11 +2,20 @@
 
 make OberonLayout aware of minimumSize
 
-file opening
-	Handle absolute file names
-
 keybinding: ctrl-s
 
+directory listings:
+	handle long listings
+	use a system call to get the list (instead of by hand in Java) and put the call in an exec in the tag
+	perhaps change the tag's format to something with these alternatives:
+			simple: File: "/tmp/duh"
+			arbitrary shell command: File: [{"ls", "-l", "/tmp/duh"}]
+		and make a "Verbose" command which will toggle between the formats (where the arg is either a string or an list)
+
+X file opening
+	Handle absolute file names
+	
+X error: deleted views don't seem to remove themselves from the list in the swing version
 
 X real namespaces with default commands
 

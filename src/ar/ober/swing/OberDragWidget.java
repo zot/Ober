@@ -7,7 +7,7 @@ This software is distributed under the terms of the
 Artistic License. Read the included file
 License.txt for more information.
 */
-package ar.ober;
+package ar.ober.swing;
 
 import java.awt.Canvas;
 import java.awt.Color;
@@ -19,11 +19,13 @@ import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 
-public class OberDragWidget extends JComponent implements MouseListener, MouseMotionListener {
+public class OberDragWidget extends JComponent implements MouseListener, MouseMotionListener, PropertyChangeListener {
 	public class Tracker extends Canvas {
 		public Tracker() {
 			setBorder(BorderFactory.createLineBorder(Color.BLACK));
@@ -37,14 +39,17 @@ public class OberDragWidget extends JComponent implements MouseListener, MouseMo
 
 	protected Point offset;
 	protected Tracker tracker = new Tracker();
-	protected OberViewer viewer;
+	protected OberSwingViewer viewer;
 
-	public OberDragWidget(OberViewer v) {
+	public OberDragWidget(OberSwingViewer v) {
 		viewer = v;
 		setBorder(BorderFactory.createLineBorder(Color.BLACK));
 		addMouseListener(this);
 		addMouseMotionListener(this);
 		setMinimumSize(new Dimension(10, 10));
+	}
+	public void propertyChange(PropertyChangeEvent evt) {
+		repaint();
 	}
 	public void paint(Graphics g) {
 		g.setColor(viewer.isDirty() ? Color.BLACK : Color.WHITE);

@@ -14,8 +14,8 @@ public abstract class OberCommand {
 	
 	protected String description;
 
-	public OberCommand(String str) {
-		description = str;
+	public OberCommand(String description) {
+		this.description = description;
 	}
 	public String getDescription() {
 		return description;

@@ -9,20 +9,6 @@ License.txt for more information.
 */
 package ar.ober;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.Point;
-import java.awt.event.HierarchyEvent;
-import java.awt.event.HierarchyListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -35,156 +21,35 @@ import java.util.HashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.BorderFactory;
-import javax.swing.JComponent;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.JTextPane;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Document;
-import javax.swing.text.JTextComponent;
-
-public class OberViewer implements PropertyChangeListener {
-	public static class ViewerEventAdaptor implements MouseListener, KeyListener {
-		protected ArrayList oldMouseListeners = new ArrayList();
-		protected ArrayList oldKeyListeners = new ArrayList();
-		protected OberViewer viewer;
-		
-		public void setViewer(OberViewer v) {
-			viewer = v;
-		}
-		public boolean firstButton(MouseEvent e) {
-			return e.getButton() == 1 && (e.getModifiersEx() & (MouseEvent.CTRL_DOWN_MASK | MouseEvent.BUTTON2_DOWN_MASK | MouseEvent.BUTTON3_DOWN_MASK)) == 0;
-		}
-		public boolean secondButton(MouseEvent e) {
-			return (e.getButton() == 2 && (e.getModifiersEx() & (MouseEvent.CTRL_DOWN_MASK | MouseEvent.BUTTON1_DOWN_MASK | MouseEvent.BUTTON3_DOWN_MASK)) == 0)
-				|| (e.getButton() == 1 && (e.getModifiersEx() & MouseEvent.CTRL_DOWN_MASK) != 0);
-		}
-		public boolean thirdButton(MouseEvent e) {
-			return e.getButton() == 3 && (e.getModifiersEx() & (MouseEvent.CTRL_DOWN_MASK | MouseEvent.BUTTON1_DOWN_MASK | MouseEvent.BUTTON2_DOWN_MASK)) == 0;
-		}
-		public void mouseClicked(MouseEvent e) {
-			if (firstButton(e)) {
-				for (int i = 0; i < oldMouseListeners.size(); i++) {
-					((MouseListener)oldMouseListeners.get(i)).mouseClicked(e);
-				}
-			} else if (secondButton(e)) {
-				viewer.findFile(viewer, (JTextComponent)e.getSource(), e.getPoint());
-			} else if (thirdButton(e)) {
-				viewer.executeCommand(new OberContext(e, (JTextComponent)e.getSource(), viewer));
-			}
-		}
-		public void mousePressed(MouseEvent e) {
-			if (firstButton(e)) {
-				for (int i = 0; i < oldMouseListeners.size(); i++) {
-					((MouseListener)oldMouseListeners.get(i)).mousePressed(e);
-				}
-			}
-		}
-		public void mouseReleased(MouseEvent e) {
-			if (firstButton(e)) {
-				for (int i = 0; i < oldMouseListeners.size(); i++) {
-					((MouseListener)oldMouseListeners.get(i)).mouseReleased(e);
-				}
-			}
-		}
-		public void mouseEntered(MouseEvent e) {
-			for (int i = 0; i < oldMouseListeners.size(); i++) {
-				((MouseListener)oldMouseListeners.get(i)).mouseEntered(e);
-			}
-		}
-		public void mouseExited(MouseEvent e) {
-			for (int i = 0; i < oldMouseListeners.size(); i++) {
-				((MouseListener)oldMouseListeners.get(i)).mouseExited(e);
-			}
-		}
-		public void keyTyped(KeyEvent e) {
-			for (int i = 0; i < oldKeyListeners.size(); i++) {
-				((KeyListener)oldKeyListeners.get(i)).keyTyped(e);
-			}
-		}
-		public void keyPressed(KeyEvent e) {
-			if (!viewer.handleKey(e)) {
-				for (int i = 0; i < oldKeyListeners.size(); i++) {
-					((KeyListener)oldKeyListeners.get(i)).keyPressed(e);
-				}
-			}
-		}
-		public void keyReleased(KeyEvent e) {
-			for (int i = 0; i < oldKeyListeners.size(); i++) {
-				((KeyListener)oldKeyListeners.get(i)).keyReleased(e);
-			}
-		}
-		public void addMouseListener(MouseListener l) {
-			oldMouseListeners.add(l);
-		}
-		public void removeMouseListener(MouseListener l) {
-			oldMouseListeners.remove(l);
-		}
-		public void addKeyListener(KeyListener l) {
-			oldKeyListeners.add(l);
-		}
-		public void removeKeyListener(KeyListener l) {
-			oldKeyListeners.remove(l);
-		}
-	}
-
-	public static class Tag extends JTextField {
-		protected ViewerEventAdaptor eventAdaptor;
-
-		public Tag(OberViewer viewer) {
-			super();
-			getEventAdaptor().setViewer(viewer);
-		}
-		public ViewerEventAdaptor getEventAdaptor() {
-			if (eventAdaptor == null) {
-				eventAdaptor = new ViewerEventAdaptor();
-				super.addMouseListener(eventAdaptor);
-				super.addKeyListener(eventAdaptor);
-			}
-			return eventAdaptor;
-		}
-		public void addMouseListener(MouseListener l) {
-			getEventAdaptor().addMouseListener(l);
-		}
-		public synchronized void removeMouseListener(MouseListener l) {
-			getEventAdaptor().removeMouseListener(l);
-		}
-	}
-
-	public static class AdaptedTextPane extends JTextPane {
-		protected ViewerEventAdaptor eventAdaptor;
-
-		public AdaptedTextPane(OberViewer viewer) {
-			super();
-			getEventAdaptor().setViewer(viewer);
-		}
-		public ViewerEventAdaptor getEventAdaptor() {
-			if (eventAdaptor == null) {
-				eventAdaptor = new ViewerEventAdaptor();
-				super.addMouseListener(eventAdaptor);
-				super.addKeyListener(eventAdaptor);
-			}
-			return eventAdaptor;
-		}
-		public void addMouseListener(MouseListener l) {
-			getEventAdaptor().addMouseListener(l);
-		}
-		public synchronized void removeMouseListener(MouseListener l) {
-			getEventAdaptor().removeMouseListener(l);
-		}
-	}
+public abstract class OberViewer {
+	public abstract boolean inTag(Object event);
+	public abstract void setTagText(String text);
+	public abstract void setTagBackground(int color);
+	public abstract int getWidth();
+	public abstract void setPosition(float frac);
+	public abstract void setText(String txt);
+	public abstract String getText(int start, int length);
+	public abstract int getCaretPosition();
+	public abstract int getDocumentLength();
+	public abstract void insertString(int pos, String str, Object style);
+	public abstract void setCaretPosition(int pos);
+	public abstract void removeFromParent();
+	public abstract void requestFocus();
+	public abstract String getTagText();
+	public abstract int getTagCaretPosition();
+	public abstract boolean isDirty();
+	public abstract void markClean();
+	public abstract void markDirty();
+	public abstract void setTrackingChanges(boolean track);
+	public abstract void detachDocument() throws IOException, ClassNotFoundException;
+	protected abstract void useDocument(OberViewer viewer);
+	protected abstract void createGui();
 	
-	protected Tag tag = new Tag(this);
-	protected JPanel tagPanel = new JPanel();
-	protected JPanel wrapper = new JPanel();
-	protected OberDragWidget dragger = new OberDragWidget(this);
 	protected boolean active = false;
-	protected Ober ober;
-	protected Component component;
+	public Ober ober;
 	protected OberViewer parentViewer;
 	protected ArrayList children = new ArrayList();
-	protected int type;
+	public int type;
 	protected HashMap properties = new HashMap();
 
 	public static final int VIEWER_TYPE = 0;
@@ -201,15 +66,29 @@ public class OberViewer implements PropertyChangeListener {
 	public static final String TAG_FILE = "File:\\s" + FILE;
 	public static final Pattern TAG_FILE_PATTERN = Pattern.compile(TAG_FILE);
 	public static final Pattern COMMENT_PATTERN = Pattern.compile("\\s*#");
+	public static Object BOLD;
+	public static Object BOLD_RED;
+	
+	public static OberViewer createTextViewer(Ober o, OberViewer parent) throws InstantiationException, IllegalAccessException  {
+		return createViewer(o, parent, VIEWER_TYPE);
+	}
+	public static OberViewer createViewer(Ober o, OberViewer parent, int type) throws InstantiationException, IllegalAccessException  {
+		OberViewer v = o.gui.createViewer();
+		
+		v.ober = o;
+		v.type = type;
+		v.parentViewer = parent;
+		v.createGui();
+		return v;
+	}
+	public static OberViewer createTextViewer(OberViewer source, OberViewer parent) throws InstantiationException, IllegalAccessException  {
+		OberViewer viewer = createViewer(source.ober, parent, VIEWER_TYPE);
 
-	public OberViewer(Ober o) {
-		this(VIEWER_TYPE, o);
+		viewer.setTagText("Viewer: Del, Help, Split, Detach");
+		viewer.useDocument(source);
+		return viewer;
 	}
-	public OberViewer(int type, Ober o) {
-		this.type = type;
-		ober = o;
-		createGui();
-	}
+	
 	public OberViewer getFocus() {
 		return ober.getActiveViewer();
 	}
@@ -219,93 +98,36 @@ public class OberViewer implements PropertyChangeListener {
 	public Ober getOber() {
 		return ober;
 	}
-	public void propertyChange(PropertyChangeEvent evt) {
-		repaintDragger();
-	}
-	protected void createGui() {
-		Dimension tabPref = tag.getPreferredSize();
-
-		(type == VIEWER_TYPE ? (JComponent)wrapper : tagPanel).setBorder(BorderFactory.createLineBorder(Color.GRAY));
-		ober.addViewer(this);
-		dragger.setPreferredSize(new Dimension(tabPref.height, tabPref.height));
-		tagPanel.setLayout(new BorderLayout());
-		tagPanel.add(dragger, BorderLayout.WEST);
-		tagPanel.add(tag, BorderLayout.CENTER);
-		wrapper.setLayout(new BorderLayout());
-		wrapper.add(tagPanel, BorderLayout.NORTH);
-		wrapper.addHierarchyListener(new HierarchyListener() {
-			public void hierarchyChanged(HierarchyEvent e) {
-				if ((e.getChangeFlags() & (HierarchyEvent.PARENT_CHANGED | HierarchyEvent.HIERARCHY_CHANGED)) != 0) {
-					if (e.getChanged().getParent() == null) {
-						dying();
-					}
-				}
-			}
-		});
-		tag.setText("Help");
-		tag.setBackground(Ober.VIEWER_COLOR);
-	}
 	public void dying() {
 		ober.removeViewer(OberViewer.this);
 	}
-	public void acceptViewer(OberViewer v) {
-		if (v.getType() >= type) {
-			parentViewer.acceptViewer(v);
-		} else if (v.getType() == VIEWER_TYPE && type == MAIN_TYPE){
-			int maxWidth = 0;
-			int trackIndex = 0;
-
-			if (children.isEmpty()) {
-				acceptViewer(ober.createTrack());
-			}
-			for (int i = 0; i < children.size(); i++) {
-				int wid = ((OberViewer)children.get(i)).getWrapper().getWidth();
-
-				if (wid > maxWidth) {
-					maxWidth = wid;
-					trackIndex = i;
-				}
-			}
-			((OberViewer)children.get(trackIndex)).acceptViewer(v);
-		} else {
-			layout().insert(v, (Container)component);
-			component.validate();
+	public OberViewer widestTrack() throws InstantiationException, IllegalAccessException {
+		if (type != MAIN_TYPE) {
+			return parentViewer.widestTrack();
 		}
-	}
-	public OberLayout layout() {
-		return (OberLayout)((Container)component).getLayout();
-	}
-	public Component getComponent() {
-		return component;
-	}
-	public void setComponent(Component comp, Component compWrapper) {
-		component = comp;
-		wrapper.add(compWrapper, BorderLayout.CENTER);
-	}
-	public void newFocus(Component c) {
-		if (active && (c == null || !wrapper.isAncestorOf(c))) {
-			active = false;
-			(type == VIEWER_TYPE ? (JComponent)wrapper : tagPanel).setBorder(BorderFactory.createLineBorder(Color.GRAY));
-			ober.deactivated(this);
-		} else if (!active && c!= null && wrapper.isAncestorOf(c)) {
-			active = true;
-			(type == VIEWER_TYPE ? (JComponent)wrapper : tagPanel).setBorder(BorderFactory.createLineBorder(Color.RED));
-			ober.activated(this);
+		int maxWidth = 0;
+		int trackIndex = 0;
+
+		if (children.isEmpty()) {
+			return ober.createTrack(this);
 		}
+		for (int i = 0; i < children.size(); i++) {
+			int wid = ((OberViewer)children.get(i)).getWidth();
+
+			if (wid > maxWidth) {
+				maxWidth = wid;
+				trackIndex = i;
+			}
+		}
+		return (OberViewer)children.get(trackIndex);
 	}
-	public boolean handleKey(KeyEvent e) {
+	public boolean handleKey(Object e) {
 		return ober.handleKey(this, e);
 	}
 	public void executeCommand(OberContext ctx) {
 		if (!ctx.getArguments().isEmpty()) {
 			ober.executeCommand(ctx);
 		}
-	}
-	public JPanel getWrapper() {
-		return wrapper;
-	}
-	public Tag getTag() {
-		return tag;
 	}
 	public int getType() {
 		return type;
@@ -322,47 +144,46 @@ public class OberViewer implements PropertyChangeListener {
 			parentViewer.addChild(this);
 		}
 	}
-	protected void addChild(OberViewer viewer) {
+	public void addChild(OberViewer viewer) {
 		children.add(viewer);
 	}
-	protected void removeChild(OberViewer viewer) {
+	public void removeChild(OberViewer viewer) {
 		children.remove(viewer);
 	}
-	protected void error(Throwable t) {
+	public void error(Throwable t) {
 		StringWriter w = new StringWriter();
 		
 		t.printStackTrace(new PrintWriter(w));
 		error(w.toString());
 	}
-	protected void error(String msg) {
-		msg("Errors", msg);
-	}
-	protected void msg(String name, String msg) {
-		OberViewer v = topViewer().findOrCreateViewerNamed(name);
-
-		JTextPane text = (JTextPane)v.getComponent();
-		msg += "\n";
+	public void error(String msg) {
+		System.out.println(msg);
 		try {
-			text.getDocument().insertString(text.getDocument().getLength(), msg, null);
-		} catch (BadLocationException e) {
+			msg("Errors", msg);
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 	public OberViewer topViewer() {
 		return type == MAIN_TYPE ? this : parentViewer == null ? null : parentViewer.topViewer();
 	}
-	protected OberViewer findOrCreateViewerNamed(String name)  {
+	protected void msg(String name, String msg) throws InstantiationException, IllegalAccessException {
+		OberViewer v = topViewer().findOrCreateViewerNamed(name);
+
+		msg += "\n";
+		v.insertString(v.getDocumentLength(), msg, null);
+	}
+	public OberViewer findOrCreateViewerNamed(String name) throws InstantiationException, IllegalAccessException  {
 		OberViewer v = findViewerNamed(name);
 		
 		if (v == null)  {
-			v = ober.createTextViewer();
+			v = createTextViewer(ober, widestTrack());
 			v.setName(name);
-			topViewer().acceptViewer(v);
 		}
 		return v;
 	}
 	protected OberViewer findViewerNamed(String string) {
-		if (getName().equals(string)) {
+		if (string.equals(getName())) {
 			return this;
 		}
 		for (int i = 0; i < children.size(); i++) {
@@ -393,26 +214,26 @@ public class OberViewer implements PropertyChangeListener {
 		return (OberViewer)children.get(i);
 	}
 	public String getName() {
-		String tabText = tag.getText();
-		Matcher m = VIEWER_NAME_PATTERN.matcher(tabText);
+		String tagText = getTagText();
+		Matcher m = VIEWER_NAME_PATTERN.matcher(tagText);
 
-		return m.find() ? tabText.substring(m.start(), m.end()) : null;
+		return m.find() ? tagText.substring(m.start(), m.end()) : null;
 	}
 	public void setName(String name) {
-		String tabText = tag.getText();
-		Matcher m = VIEWER_NAME_PATTERN.matcher(tabText);
+		String tagText = getTagText();
+		Matcher m = VIEWER_NAME_PATTERN.matcher(tagText);
 
 		if (m.find()) {
-			tag.setText(tabText.substring(0, m.start()) + name + tabText.substring(m.end(), tabText.length()));
+			setTagText(tagText.substring(0, m.start()) + name + tagText.substring(m.end(), tagText.length()));
 		} else {
-			tag.setText(name + ": " + tag.getText());
+			setTagText(name + ": " + tagText);
 		}
 	}
 	public String toString() {
 		return "Viewer: " + getName();
 	}
 	public String[] getFilename() {
-		String txt = tag.getText();
+		String txt = getTagText();
 		Matcher match = TAG_FILE_PATTERN.matcher(txt);
 
 		if (match.find()) {
@@ -421,11 +242,6 @@ public class OberViewer implements PropertyChangeListener {
 		return null;
 	}
 	public void loadFile() {
-		if (!(component instanceof JTextPane)) {
-			error("This type of viewer can't load or save files.");
-			return;
-		}
-		OberDocument doc = (OberDocument)((JTextComponent)component).getDocument();
 		File file = new File(getFilename()[1]);
 		FileInputStream fin = null;
 		StringBuffer str = new StringBuffer();
@@ -461,24 +277,20 @@ public class OberViewer implements PropertyChangeListener {
 					}
 				}
 			}
-			int pos = ((JTextComponent)component).getCaretPosition();
-			((JTextComponent)component).setText(str.toString());
-			((JTextComponent)component).setCaretPosition(Math.min(pos, doc.getLength()));
-			doc.setTrackingChanges(true);
-			doc.markClean();
+			int pos = getCaretPosition();
+			setText(str.toString());
+			setCaretPosition(Math.min(pos, getDocumentLength()));
+			setTrackingChanges(true);
+			markClean();
 		}
 	}
 	public void storeFile() {
-		if (!(component instanceof JTextComponent)) {
-			error("This type of viewer can't load or save files.");
-		}
 		String filename[] = getFilename();
 		FileOutputStream fout = null;
-		Document doc = ((JTextComponent)component).getDocument();
 
 		try {
 			fout = new FileOutputStream(filename[1]);
-			fout.write(doc.getText(0, doc.getLength()).getBytes());
+			fout.write(getText(0, getDocumentLength()).getBytes());
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
@@ -492,25 +304,9 @@ public class OberViewer implements PropertyChangeListener {
 		}
 		markClean();
 	}
-	public boolean isDirty() {
-		return component instanceof AdaptedTextPane
-			&& ((AdaptedTextPane)component).getDocument() instanceof OberDocument
-			&& ((OberDocument)((AdaptedTextPane)component).getDocument()).isDirty();
-	}
-	public void markDirty() {
-		((OberDocument)((AdaptedTextPane)component).getDocument()).markDirty();
-	}
-	public void markClean() {
-		((OberDocument)((AdaptedTextPane)component).getDocument()).markClean();
-	}
-	public void repaintDragger() {
-		dragger.repaint();
-	}
 	// TODO factor out matching so we can do it line-by-line
 	// public Matcher findPattern(Pattern pat, )
-	public void findFile(OberViewer viewer, JTextComponent textComponent, Point p) {
-		int loc = textComponent.viewToModel(p);
-		String txt = textComponent.getText();
+	public void findFile(OberViewer viewer, String txt, int loc) throws InstantiationException, IllegalAccessException {
 		Matcher m = FILE_PATTERN.matcher(txt);
 
 		while (m.find()) {
@@ -521,24 +317,21 @@ public class OberViewer implements PropertyChangeListener {
 			}
 		}
 	}
-	public void findOrCreateViewerForFile(String filename) {
+	public void findOrCreateViewerForFile(String filename) throws InstantiationException, IllegalAccessException {
 		OberViewer fileViewer = topViewer().findViewerForFile(filename);
 		
 		if (fileViewer == null) {
-			fileViewer = ober.createTextViewer();
-			fileViewer.tag.setText("File: " + filename + " Get, Put, Del, Help, Split");
-			topViewer().acceptViewer(fileViewer);
+			fileViewer = createTextViewer(ober, widestTrack());
+			fileViewer.setTagText("File: " + filename + " Get, Put, Del, Help, Split");
 			fileViewer.loadFile();
 		}
-		fileViewer.getComponent().requestFocus();
+		fileViewer.requestFocus();
 	}
 	public String filenameFor(String string) {
 		String parent[] = getFilename();
-		File f;
+		File f = new File(string);
 		
-		if (parent == null) {
-			f = new File(string);
-		} else {
+		if (parent != null && !f.isAbsolute()) {
 			f = new File(parent[1]);
 			f = new File(f.isDirectory() ? f : f.getParentFile(), string);
 		}

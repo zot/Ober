@@ -81,31 +81,35 @@ public class OberNamespace implements Comparable {
 			throw new Exception("Ober command not found: " + namespaceName + "." + commandName);
 		}
 	}
-	public void help(StringBuffer buf) {
-		buf.append("\n\nNamespace: ");
-		buf.append(name);
-		buf.append(" parents: ");
+	public void help(Ober ober, OberViewer viewer) {
+		viewer.insertString(viewer.getDocumentLength(), "\n\nNamespace: ", OberViewer.BOLD);
+		viewer.insertString(viewer.getDocumentLength(), name, OberViewer.BOLD_RED);
+		viewer.insertString(viewer.getDocumentLength(), " parents: ", OberViewer.BOLD);
 		for (int i = 0; i < parents.length; i++) {
 			if (i > 0) {
-				buf.append(", ");
+				viewer.insertString(viewer.getDocumentLength(), ", ", null);
 			}
-			buf.append(parents[i].getName());
+			viewer.insertString(viewer.getDocumentLength(), parents[i].getName(), null);
 		}
-		buf.append("\nCommands:");
+		viewer.insertString(viewer.getDocumentLength(), "\nCommands:", null);
+		if (defaultCommand != null) {
+			viewer.insertString(viewer.getDocumentLength(), "\n\t<DEFAULT>", OberViewer.BOLD_RED);
+			viewer.insertString(viewer.getDocumentLength(), defaultCommand.getDescription(), null);
+		}
 		for (Iterator i = commands.keySet().iterator(); i.hasNext(); ) {
 			String cmd = (String) i.next();
 
-			buf.append("\n\t");
-			buf.append(cmd);
-			buf.append(((OberCommand)commands.get(cmd)).getDescription());
+			viewer.insertString(viewer.getDocumentLength(), "\n\t", null);
+			viewer.insertString(viewer.getDocumentLength(), cmd, OberViewer.BOLD_RED);
+			viewer.insertString(viewer.getDocumentLength(), ((OberCommand)commands.get(cmd)).getDescription(), null);
 		}
-		buf.append("\nKey Bindings:");
+		viewer.insertString(viewer.getDocumentLength(), "\nKey Bindings:", null);
 		for (Iterator i = bindings.keySet().iterator(); i.hasNext(); ) {
 			String cmd = (String) i.next();
 
-			buf.append("\n\t");
-			buf.append(cmd);
-			buf.append(((OberCommand)bindings.get(cmd)).getDescription());
+			viewer.insertString(viewer.getDocumentLength(), "\n\t", null);
+			viewer.insertString(viewer.getDocumentLength(), cmd, OberViewer.BOLD_RED);
+			viewer.insertString(viewer.getDocumentLength(), ((OberCommand)bindings.get(cmd)).getDescription(), null);
 		}
 	}
 	protected String getName() {

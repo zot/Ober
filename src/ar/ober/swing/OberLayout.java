@@ -7,7 +7,7 @@ This software is distributed under the terms of the
 Artistic License. Read the included file
 License.txt for more information.
 */
-package ar.ober;
+package ar.ober.swing;
 
 import java.awt.Component;
 import java.awt.Container;
@@ -18,13 +18,14 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.util.ArrayList;
 
+
 public class OberLayout implements LayoutManager2 {
 	protected boolean vertical;
 	protected ArrayList components = new ArrayList();
 	protected float positions[] = new float[8];
-	protected OberViewer viewer;
+	protected OberSwingViewer viewer;
  
- 	public OberLayout(OberViewer v, boolean vert) {
+ 	public OberLayout(OberSwingViewer v, boolean vert) {
  		vertical = vert;
  		viewer = v;
  	}
@@ -141,11 +142,11 @@ public class OberLayout implements LayoutManager2 {
 	public void constrain(int x, int y, OberDragWidget widget, OberDragWidget.Tracker tracker) {
 		Container top = topComponent(tracker);
 		Point splitterPoint = new Point(x, y);
-		widget.transformPoint(splitterPoint, widget, widget.viewer.getWrapper().getParent());
+		widget.transformPoint(splitterPoint, widget, widget.viewer.wrapper.getParent());
 		Point windowPoint = new Point(x, y);
 		widget.transformPoint(windowPoint, widget, top);
 		Point widgetLocation = widget.getLocation();
-		widget.transformPoint(widgetLocation, widget.getParent(), widget.viewer.getWrapper().getParent());
+		widget.transformPoint(widgetLocation, widget.getParent(), widget.viewer.wrapper.getParent());
 		Component target = top.findComponentAt(windowPoint);
 		Container targetParent = tracker.getParent();
 
@@ -179,7 +180,7 @@ public class OberLayout implements LayoutManager2 {
 	protected boolean isVertical() {
 		return vertical;
 	}
-	public void insert(OberViewer child, Container container) {
+	public void insert(OberSwingViewer child, Container container) {
 		float max = 0;
 		int maxIndex = 0;
 
@@ -196,14 +197,14 @@ public class OberLayout implements LayoutManager2 {
 		container.add(child.getWrapper(), new Float(old));
 		child.setParentViewer(viewer);
 	}
-	public void insert(OberViewer child, Container container, Point point) {
+	public void insert(OberSwingViewer child, Container container, Point point) {
 		container.add(child.getWrapper(), new Float(vertical ? point.y / (float)container.getHeight() : point.x / (float)container.getWidth()));
 		child.setParentViewer(viewer);
 	}
-	public void setPosition(OberViewer viewer, Point point) {
+	public void setPosition(OberSwingViewer viewer, Point point) {
 		setPosition(viewer, vertical ? point.y / (float)viewer.getWrapper().getParent().getHeight() : point.x / (float)viewer.getWrapper().getParent().getWidth());
 	}
-	public void setPosition(OberViewer viewer, float pos)  {
+	public void setPosition(OberSwingViewer viewer, float pos)  {
 		removeLayoutComponent(viewer.getWrapper());
 		addLayoutComponent(viewer.getWrapper(), new Float(pos));
 	}
