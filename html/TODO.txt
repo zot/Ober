@@ -4,7 +4,7 @@ make OberonLayout aware of minimumSize
 
 keybinding: ctrl-s
 
-directory listings:
+X directory listings:
 	handle long listings
 	use a system call to get the list (instead of by hand in Java) and put the call in an exec in the tag
 	perhaps change the tag's format to something with these alternatives:

@@ -1,3 +1,28 @@
+* 2003-07-30 - v0.9.6
+
+-- Made Ober pluggable for GUI platform (Swing and SWT now supported)
+
+-- Improved file name representation for viewers
+	Filename can be a shell command represented as an Ognl list (ex: [{"ls", "-l", "/tmp"}])
+	This allows Text.Get to get input from a shell process or a file.  There is still some hokiness
+	here because Text.Long assumes the last element is the filename, for the purposes of toggling
+	back to a simple filename.
+	
+-- Viewer content retrieval is now done in the background, so that you can retrieve output from a
+	shell process without blocking
+	
+-- Improved shell command handling
+	
+-- Started work on an OberPlugin for Eclipse
+
+Command improvements
+
+-- Text.Long: toggles long listing for directories
+
+-- System.Help: improved look with coloring and boldness
+
+ -- OgnlScript: fixed parsing bug, added getValue(OgnlContext con, Object root)
+
 * 2003-06-18 - v0.9.5
 
 -- Improved Command System: Now More OO Than Ever!
@@ -20,6 +45,7 @@ of the messages returns true.  Key bindings are handled in a similar fashion.
 
 new commands:
 	System Default Command -- invokes a shell command with the arguments you clicked on.  If the first argument begins with a "!", 
+		then the command is taken to the end of the line
 	System.Detach -- detach a split view from the original text document
 	System.Define <namespace.name> <description> <OGNL expr> -- define a new command (useful for autoloading)
 
