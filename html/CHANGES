@@ -1,3 +1,15 @@
+* 2003-11-24 - v0.9.7
+
+-- Switched from OGNL to JavaScript (Mozilla's Rhino project)
+
+-- Added Text.Calc command
+	[from Text.Calc help]
+	perform calculations and replace results into text.
+	For Example:\n\ta = 3\n\tb = 4\n\tc = 0\n\t{c = a * b}.  Execute Text.Calc
+
+-- Fixed bugs with command matching and shell command execution
+
+
 * 2003-07-30 - v0.9.6
 
 -- Made Ober pluggable for GUI platform (Swing and SWT now supported)

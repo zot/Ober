@@ -2,26 +2,61 @@
 <head><title>Ober</title></head>
 <body>
 	<H1>Ober @  <a href="http://sourceforge.net"><img align="middle" src="http://sourceforge.net/sflogo.php?group_id=76070&amp;type=4" width="125" height="37" border="0" alt="SourceForge.net Logo" /></a></H1>
-	<H2>Current version is 0.9.6, July 30, 2003</H2>
+	<H2>Current version is 0.9.7, Nov 24, 2003</H2>
 	<p>Ober brings the power of the Oberon interface to Java, blending command-line and GUI models.
 	Ancestors are <a href="http://www.oberon.ethz.ch/">Oberon</a>, <a href="http://plan9.bell-labs.com/sys/doc/acme/acme.ps">Acme</a>,
 	and <a href="http://www.cs.yorku.ca/~oz/wily/index.html">Wily</a>.
-	<p>Ober is a small extensible <a href="http://java.sun.com/products/jfc/">JFC</a> (Swing) framework that provides moveable and
-	resizeable views along with text file viewing/editing and a user command model, which integrates <a href="http://ognl.org">OGNL</a>
-	to handle embedded java expressions (in the OGNL expressions, 'this' is the current viewer).  The command model supports namespaces
+	<p>Ober is a small extensible framework for <a href="http://dev.eclipse.org/viewcvs/index.cgi/%7Echeckout%7E/platform-swt-home/main.html">SWT
+	</a> and <a href="http://java.sun.com/products/jfc/">JFC</a> (Swing) that provides moveable and
+	resizeable views along with text file viewing/editing and a user command model, which integrates <a href="http://www.mozilla.org/rhino/">Rhino 1.5r4.1</a>
+	to handle embedded java expressions (in the JavaScript expressions, 'this' is the current OberContext).  The command model supports namespaces
 	and keyboard bindings.  I like to think of it as <a href="http://eclipse.org">Eclipse</a> on a starvation diet.
 	<p>The philosophy of Ober is full disclosure.  If possible, the full state of a viewer is represented textually and is also editable.
 	One example is that the namespace for a viewer is the first word in the tag (see below).  If you change this word, you change
 	the namespace that the viewer uses to interpret commands and key bindings.  If the word is not a defined namespace, System is
 	used be default.
 	<p>Since you can use OGNL to evaluate Java directly, you can extend Ober by simply placing extension code in your classpath and 
-	adding an OGNL command to your .oberrc file to hook it into the current Ober view. Here is a sample <a href=".oberrc">.oberrc</a> file.
+	adding an OGNL command to your .oberrc file to hook it into the current Ober view. <!-- Here is a sample <a href=".oberrc">.oberrc</a> file. -->
 	<p>Here is the  <a href="http://sourceforge.net/projects/ober/">project</a>
 	<p>Here is a link to the <a href="http://sourceforge.net/project/showfiles.php?group_id=76070">downloads.</a>  It comes
-	in an executable jar, so just download it and double click it to see it go or run it from the command line (using "java -jar ober-0.9.5.jar"
+	in an executable jar, so just download it and double click it to see it go or run it from the command line (using "java -jar ober-0.9.7.jar"
 	for example).
 	<p>The <a href="CHANGES">Change log</a>
 	<p>The <a href="TODO.txt">Todo</a> list
+	<p>Ober supports a command called Text.Calc (or Calc for short if you're in a Text viewer).  It reads
+	variable values from the current file, executes JavaScript code in the file (in curlies), and replaces the new
+	values into the file.  Kind of like HTML forms for Ober, where the form processing code is actually in the file.
+	You can use this to access your own code from within a 'calc' form.  Here's a calc form to try out.  Paste it into
+	an ober viewer and then hit Text.Calc in the top tag a few times:
+	<pre>
+	multiples =  |1.0 |2.0 |3.0 |4.0  |
+	
+	third = 3    fourth = 4      
+	
+	table=
+	    |2|3|
+	    |4|7|
+	
+	cell11 = 7
+	
+	{
+	        multiples.length=0;
+	        if (count < 1) {
+	                multiples[0] = 0;
+	        }
+	        for (i = 0; i < count; i++) {
+	                multiples[i] = num * (i + 1);
+	        }
+	        num++;
+	        third = multiples[2];
+	}
+	
+	{
+	        fourth = multiples[3];
+	        cell11=table[1][1];
+	}
+	
+	</pre>
 	<p>Here is a screen shot of Ober in action:
 	<p><img src="images/ober.jpg">
 	<p>Here is a screen shot of a protocol analyzer I wrote as an internal tool to help us debug a new version of
