@@ -153,4 +153,7 @@ public class OberContext {
 	public boolean isComment() {
 		return OberViewer.COMMENT_PATTERN.matcher(doc.substring(cmdStart)).lookingAt();
 	}
+	public String getCommandString() {
+		return doc.substring(cmdStart, nextPosition);
+	}
 }

@@ -47,6 +47,7 @@ public class Ober implements PropertyChangeListener {
 	public static final Color MAIN_COLOR = Color.WHITE;
 	public static final Color TRACK_COLOR = new Color((float)0.8, (float)1, (float)1);
 	public static final Color VIEWER_COLOR = new Color((float)0.8, (float)0.8, (float)0.8);
+	public static final String VERSION = "0.9.4";
 	
 	public static void main(String args[]) {
 		Ober ober = new Ober();
@@ -63,7 +64,7 @@ public class Ober implements PropertyChangeListener {
 	}
 	public void help(OberViewer sourceViewer) {
 		OberViewer tv = createTextViewer();
-		StringBuffer buf = new StringBuffer("Welcome to Ober, an Oberon environment for Java.\n\n" +			"EXECUTING COMMANDS\n" +
+		StringBuffer buf = new StringBuffer("Welcome to Ober, version " + VERSION + ", an Oberon environment for Java.\n\n" +			"EXECUTING COMMANDS\n" +
 			"To execute a command, position the mouse pointer over a word and click the third mouse " +			"button. If you do not have a three button mouse, use the second button.\n\n" +			"COMMAND ARGUMENTS\n" +			"Arguments are either words or OGNL expressions (http://www.ognl.org/) within square " +			"brackets (example: Echo [3 + 4]).  The reciever is the viewer containing the command.\n\n" +			"OGNL PROPERTIES\n" +			"focus -- The viewer with keyboard focus\n" +			"ober -- the Ober environment\n" +			"properties -- user properties for the command viewer.\n" +			"ober.properties -- global user properties.\n\n" +			"OPENING FILES\n" +
 			"To open a file or a directory, type a filename and click it with the second mouse button.  If " +			"you do not have a three button mouse, control-click the filename instead.  Try one of these...\n" +
 			"\tC:\\\n" +
@@ -358,6 +359,7 @@ public class Ober implements PropertyChangeListener {
 				try {
 					cmd.execute(ctx);
 				} catch (Exception ex) {
+					ctx.getSourceViewer().error("Error executing command: " + ctx.getCommandString());
 					ctx.getSourceViewer().error(ex);
 				}
 			} else {
