@@ -17,3 +17,15 @@ Dur? -- this line also prints a command not found error
 Echo one
 Din?
 Echo two
+
+# create a "guide" track on the left hand side, ala Wily's suggestion
+
+Newcol
+New
+Newcol
+# set the initial size of the track and layout the container so that the "New" command
+# will put the new text viewer into the big track
+Exec [#track = sourceViewer.topViewer().getChild(1), #track.wrapper.parent.layout.setPosition(#track, 0.3), #track.wrapper.parent.layout.layoutContainer(#track.wrapper.parent)]
+New
+# load up the "guide" file
+Exec [#viewer = sourceViewer.topViewer().getChild(0).getChild(0), #viewer.tag.text = "File: /home/bill/.guide", #viewer.loadFile()]
