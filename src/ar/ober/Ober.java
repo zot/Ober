@@ -25,7 +25,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -73,56 +72,51 @@ public class Ober implements PropertyChangeListener {
 		ArrayList spaces = new ArrayList();
 		for (Iterator i = namespaces.values().iterator(); i.hasNext(); ) {
 			ArrayList inh = new ArrayList((ArrayList)i.next());
-			ArrayList inhRev = new ArrayList();
+			StringBuffer inhRev = new StringBuffer();
 			
 			for (int j = inh.size(); j-- > 0; ) {
-				inhRev.add(inh.get(j));
+				if (j < inh.size() - 1) {
+					inhRev.append(",");
+				}
+				inhRev.append(inh.get(j));
 			}
-			spaces.add(inhRev);
+			spaces.add(inhRev.toString());
 		}
-		Collections.sort(spaces, new Comparator() {
-			public int compare(Object o1, Object o2) {
-				return o1.toString().compareTo(o2.toString());
-			}
-			public boolean equals(Object obj) {
-				return true;
-			}
-		});
+		Collections.sort(spaces);
 		ArrayList cmd = new ArrayList(commands.keySet());
 		Collections.sort(cmd);
-		int namespace = 0;
-		String prevName = null;
+		for (int space = 0; space < spaces.size(); space++) {
+			boolean started = false;
+			String inhString = (String)spaces.get(space);
+			String spaceName = inhString.substring(inhString.lastIndexOf(',') + 1);
+			String spaceNameDot = spaceName + ".";
+			ArrayList inh = (ArrayList) namespaces.get(spaceName);
 
-		for (int i = 0; i < cmd.size(); i++) {
-			String cmdSpace = ((String)cmd.get(i)).split("\\.")[0];
-
-			while (spaces.size() > namespace) {
-				ArrayList inh = (ArrayList)spaces.get(namespace);
-				String name = (String) inh.get(inh.size() - 1);
-
-				if (namespace == 0 || !prevName.equals(cmdSpace)) {
-					ArrayList space = (ArrayList) namespaces.get(name);
-
-					buf.append("\nNamespace: ");
-					buf.append(space.get(0));
-					buf.append(" path: ");
-					for (int j = 1; j < space.size(); j++) {
-						if (j > 1) {
-							buf.append(", ");
-						}
-						buf.append(space.get(j));
-					}
-					buf.append('\n');
-					prevName = name;
-					namespace++;
-				} else {
-					break;
+			buf.append("\nNamespace: ");
+			buf.append(spaceName);
+			buf.append(" path: ");
+			for (int j = 1; j < inh.size(); j++) {
+				if (j > 1) {
+					buf.append(", ");
 				}
+				buf.append(inh.get(j));
 			}
-			buf.append("   ");
-			buf.append(cmd.get(i));
-			buf.append(((OberCommand)commands.get(cmd.get(i))).getDescription());
 			buf.append('\n');
+			for (int i = 0; i < cmd.size(); i++) {
+				String command = (String) cmd.get(i);
+				if (!command.startsWith(spaceNameDot)) {
+					if (!started) {
+						continue;
+					} else {
+						break;
+					}
+				}
+				started = true;
+				buf.append("   ");
+				buf.append(command);
+				buf.append(((OberCommand)commands.get(command)).getDescription());
+				buf.append('\n');
+			}
 		}
 		buf.append("\nKey Bindings:\n");
 		ArrayList keys = new ArrayList(keybindings.keySet());

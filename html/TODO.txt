@@ -1,5 +1,7 @@
 * For 1.0
 
+upgrade to latest ognl
+
 make OberonLayout aware of minimumSize
 
 commands
