@@ -1,0 +1,88 @@
+<html>
+<head><title>Ober</title></head>
+<body>
+	<H1>Ober</H1>
+	<p>Ober brings the power of the Oberon interface to Java, blending command-line and GUI models.
+	Ancestors are <a href="http://www.oberon.ethz.ch/">Oberon</a>, <a href="http://plan9.bell-labs.com/sys/doc/acme/acme.ps">Acme</a>,
+	and <a href="http://www.cs.yorku.ca/~oz/wily/index.html">Wily</a>.
+	<p>Ober is a small extensible <a href="http://java.sun.com/products/jfc/">JFC</a> (Swing) framework that provides moveable and
+	resizeable views along with text file viewing/editing and a user command model, which integrates <a href="http://ognl.org">OGNL</a>
+	to handle embedded java expressions.  The command model supports namespaces and keyboard bindings.  I like to think of it as
+	<a href="http://eclipse.org">Eclipse</a> on a starvation diet.
+	<p>Here is the sourceforge <a href="http://sourceforge.net/projects/ober/">project</a>
+	<p>Here is a link to the <a href="http://sourceforge.net/project/showfiles.php?group_id=76070">downloads.</a>  It comes
+	in an executable jar, so just download it and double click it to see it go or run it from the command line (using "java -jar ober-0.9.1.jar"
+	for example).
+	<p>The <a href="TODO.txt">Todo</a> list
+	<p>Here is a screen shot of Ober in action:
+	<p><img src="images/ober.jpg">
+	<p>Here is a screen shot of a protocol analyzer I wrote as an internal tool to help us debug a new version of
+	<a href="http://appliedreasoning.com/products_what_is_Classic_Blend.htm">Classic Blend</a>.  It only required one line of
+	Java code for each command I added
+	to Ober and a very small method to create a viewer for the protocol analyzer.  Note that this shows how to integrate command-line behavior
+	into a graphical front end.  The "Forward" command takes three arguments.  You just edit them in the "tab" for the viewer and then click on
+	"Forward" to add a new forwarding listener to the analyzer.
+	<p><img src="images/analyzer.jpg">
+	<p>Here is the code that I used to integrate the anaylyzer into Ober...<pre>
+	
+	public static OberViewer currentViewer;
+	
+	public static void main(String args[]) {
+		Ober ober = new Ober();
+		GuiMonitor mon = new GuiMonitor();
+		OberViewer main = ober.createMain();
+
+		ChannelMultiplexor.setMicroLogging(0);
+		GuiMonitor.addNdtCommands(ober);
+		main.getTag().setText(main.getTag().getText() + ", NDT.Show");
+		JFrame frame = ober.createFrame(main);
+		main.acceptViewer(mon.createViewer(ober));
+		frame.setSize(900, 700);
+		frame.setVisible(true);
+		mon.startNoGui();
+	}
+	public static void addNdtCommands(final Ober ober) {
+		ober.addNamespace("NDT", new String[]{});
+		ober.addCommand("NDT.Show", new OberCommand(" -- create a Network Diagnostic Tool") {
+			public void execute(OberContext ctx) {
+				ctx.getSourceViewer().topViewer().acceptViewer(currentViewer);
+				ctx.getSourceViewer().topViewer().getWrapper().repaint();
+			}
+		});
+		ober.addCommand("NDT.Listen", new OberCommand(" <port> -- Listen a port.") {
+			public void execute(OberContext ctx) {
+				((GuiMonitor) ctx.getSourceViewer().getProperty("ndt")).dumpPort(Integer.parseInt(ctx.getArgumentString(1)));
+			}
+		});
+		ober.addCommand("NDT.Forward", new OberCommand(" <port> <host> <port> -- forward to another connection.") {
+			public void execute(OberContext ctx) {
+				((GuiMonitor) ctx.getSourceViewer().getProperty("ndt")).forwardPort(Integer.parseInt(ctx.getArgumentString(1)), new InetSocketAddress(ctx.getArgumentString(2), Integer.parseInt(ctx.getArgumentString(3))));
+			}
+		});
+		ober.addCommand("NDT.Disconnect", new OberCommand(" -- Disconnect a channel.") {
+			public void execute(OberContext ctx) {
+				((GuiMonitor) ctx.getSourceViewer().getProperty("ndt")).disconnectChannel();
+			}
+		});
+		ober.addCommand("NDT.Clear", new OberCommand(" -- Clear inactive channels.") {
+			public void execute(OberContext ctx) {
+				((GuiMonitor) ctx.getSourceViewer().getProperty("ndt")).clearInactive();
+			}
+		});
+	}
+	
+	public OberViewer createViewer(Ober ober) {
+		if (currentViewer == null) {
+			currentViewer = new OberViewer(ober) {
+				public void dying() {}
+			};
+			Component comp = createComponent();
+			currentViewer.getTag().setText("NDT: Disconnect, Clear, Listen 8080, Forward 55557 127.0.0.1 12345");
+			currentViewer.setComponent(comp, comp);
+			currentViewer.setProperty("ndt", this);
+		}
+		return currentViewer;
+	}
+</pre>
+</body>
+</html>

@@ -1,0 +1,25 @@
+System commands: split (spawn a viewer with the same document -- tie the change indicators to the document, not the keyboard).
+
+namespaces: Recalc
+
+dragging for command execution
+
+pattern searches:
+	anchor = [file]#[pat,]pat
+	pat = line.char | /regexp/
+
+read startup script at beginning
+
+make OberonLayout aware of minimumSize
+
+reflection: Variables command shows a series of SetVariable commands which update 'Variables' views.
+
+integrate Naked objects?
+
+eclipse plugin?
+	Is it possible to put an awt component into an eclipse view?
+	'View <title> <class>' opens an eclipse view with title and an instance of class as its contents.
+	Checks to see if class is in AWT or SWT?
+	'Menus' gives a viewer with the contents of the menus that Ober manages.
+	Lines are of the form: '<path> <Ober command string>'.
+	Get and Put commands treat the menus like a file (preserving order, etc).

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 
 import javax.swing.JFrame;
@@ -39,6 +40,8 @@ public class Ober implements PropertyChangeListener {
 	protected HashMap commands = new HashMap();
 	protected HashMap properties = new HashMap();
 	protected HashMap namespaces = new HashMap();
+	protected HashMap keybindings = new HashMap();
+	protected HashSet boundKeys = new HashSet();
 	
 	public static final Color MAIN_COLOR = Color.WHITE;
 	public static final Color TRACK_COLOR = new Color((float)0.8, (float)1, (float)1);
@@ -119,6 +122,15 @@ public class Ober implements PropertyChangeListener {
 			buf.append(((OberCommand)commands.get(cmd.get(i))).getDescription());
 			buf.append('\n');
 		}
+		buf.append("\nKey Bindings:\n");
+		ArrayList keys = new ArrayList(keybindings.keySet());
+		Collections.sort(keys);
+		for (int i = 0; i < keys.size(); i++) {
+			buf.append("   ");
+			buf.append(keys.get(i));
+			buf.append(((OberCommand)keybindings.get(keys.get(i))).getDescription());
+			buf.append('\n');
+		}
 		((JTextPane)tv.component).setText(buf.toString());
 		sourceViewer.topViewer().acceptViewer(tv);
 	}
@@ -128,6 +140,12 @@ public class Ober implements PropertyChangeListener {
 		addNamespace("Text", new String[]{});
 		addNamespace("File", new String[]{"Text"});
 		addNamespace("Errors", new String[]{"Text"});
+		bindKey("System", KeyEvent.CTRL_DOWN_MASK, KeyEvent.VK_ENTER, new OberCommand(" -- execute command on line.") {
+			public void execute(OberContext ctx) {
+				ctx.beginningOfLine();
+				executeCommand(ctx);
+			}
+		});
 		addCommand("System.Help", new OberCommand(" -- Show help on commands for a viewer.") {
 			public void execute(OberContext ctx) {
 				help(ctx.getSourceViewer());
@@ -353,5 +371,42 @@ public class Ober implements PropertyChangeListener {
 			}
 		});
 		return v;
+	}
+	public boolean handleKey(OberViewer viewer, KeyEvent e) {
+		if (boundKeys.contains(new Integer(e.getKeyCode()))) {
+			String evt = eventString(e.getModifiersEx(), e.getKeyCode());
+			String prefix = viewer.getName();
+			OberCommand cmd = null; 
+				
+			if (prefix != null) {
+				ArrayList path = (ArrayList)namespaces.get(prefix);
+
+				if (path == null && cmd == null) {
+					cmd = (OberCommand)keybindings.get("System." + evt);
+				} else {
+					for (int i = 0; cmd == null && i < path.size(); i++) {
+						cmd = (OberCommand)keybindings.get(path.get(i) + "." + evt);
+					}
+				}
+			}
+			if (cmd != null) {
+				cmd.execute(new OberContext((JTextComponent)e.getSource(), viewer, ((JTextComponent)e.getSource()).getCaretPosition()));
+				return true;
+			}
+		}
+		return false;
+	}
+	public String eventString(int modifiersEx, int keyCode) {
+		StringBuffer evt = new StringBuffer(KeyEvent.getModifiersExText(modifiersEx));
+		
+		if (evt.length() > 0) {
+			evt.append(",");
+		}
+		evt.append(KeyEvent.getKeyText(keyCode));
+		return evt.toString();
+	}
+	public void bindKey(String mode, int modifiersEx, int keyCode, OberCommand cmd) {
+		boundKeys.add(new Integer(keyCode));
+		keybindings.put(mode + "." + eventString(modifiersEx, keyCode), cmd);
 	}
 }

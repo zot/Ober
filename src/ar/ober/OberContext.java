@@ -15,7 +15,6 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 
-import javax.swing.text.BadLocationException;
 import javax.swing.text.JTextComponent;
 
 import ognl.Node;
@@ -27,7 +26,6 @@ import ar.ognl.OgnlScript;
 
 public class OberContext {
 	protected JTextComponent textComponent;
-	protected MouseEvent event;
 	protected int cmdStart = 0;
 	protected int nextPosition = 0;
 	protected String doc;
@@ -35,25 +33,17 @@ public class OberContext {
 	protected OberViewer sourceViewer;
 	
 	public OberContext(MouseEvent e, JTextComponent component, OberViewer viewer) {
-		event = e;
 		textComponent = component;
 		sourceViewer = viewer;
-		findArgs();
+		findArgs(component.viewToModel(e.getPoint()));
 	}
-	public OberContext(MouseEvent e, JTextComponent component, int start, int len) {
-		event = e;
+	public OberContext(JTextComponent component, OberViewer viewer, int pos) {
 		textComponent = component;
-		cmdStart = start;
-		try {
-			int count[] = {0};
-			doc = component.getDocument().getText(start, len);
-			Object arg = fetchArg(count);
-		} catch (BadLocationException ex) {
-			ex.printStackTrace();
-		}
+		sourceViewer = viewer;
+		doc = component.getText();
+		cmdStart = pos;
 	}
-	public void findArgs() {
-		int loc = textComponent.viewToModel(event.getPoint());
+	public void findArgs(int loc) {
 		doc = textComponent.getText();
 		Matcher m = OberViewer.LINE.matcher(doc);
 
@@ -136,5 +126,20 @@ public class OberContext {
 	}
 	public OberViewer getSourceViewer() {
 		return sourceViewer;
+	}
+	protected void beginningOfLine() {
+		Matcher m = OberViewer.LINE.matcher(doc);
+
+		while (m.find()) {
+			if (m.start() <= cmdStart && m.end() >= cmdStart) {
+				Object arg;
+				int count[] = {0};
+
+				cmdStart = m.start();
+				nextPosition = cmdStart;
+				args.add(fetchArg(count));
+				return;
+			}
+		}
 	}
 }

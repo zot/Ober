@@ -17,7 +17,8 @@ import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.HierarchyListener;
-import java.awt.event.MouseAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.File;
@@ -42,15 +43,13 @@ import javax.swing.text.Document;
 import javax.swing.text.JTextComponent;
 
 public class OberViewer {
-	public static interface AdaptedComponent {
-		public ArrayList getOldMouseListeners();
-	}
-
-	public class ViewerMouseAdapter extends MouseAdapter {
-		protected AdaptedComponent comp;
+	public static class ViewerEventAdaptor implements MouseListener, KeyListener {
+		protected ArrayList oldMouseListeners = new ArrayList();
+		protected ArrayList oldKeyListeners = new ArrayList();
+		protected OberViewer viewer;
 		
-		public ViewerMouseAdapter(AdaptedComponent c) {
-			comp = c;
+		public void setViewer(OberViewer v) {
+			viewer = v;
 		}
 		public boolean firstButton(MouseEvent e) {
 			return e.getButton() == 1 && (e.getModifiersEx() & (MouseEvent.CTRL_DOWN_MASK | MouseEvent.BUTTON2_DOWN_MASK | MouseEvent.BUTTON3_DOWN_MASK)) == 0;
@@ -64,70 +63,113 @@ public class OberViewer {
 		}
 		public void mouseClicked(MouseEvent e) {
 			if (firstButton(e)) {
-				for (int i = 0; i < comp.getOldMouseListeners().size(); i++) {
-					((MouseListener)comp.getOldMouseListeners().get(i)).mouseClicked(e);
+				for (int i = 0; i < oldMouseListeners.size(); i++) {
+					((MouseListener)oldMouseListeners.get(i)).mouseClicked(e);
 				}
 			} else if (secondButton(e)) {
-				findFile(OberViewer.this, (JTextComponent)e.getSource(), e.getPoint());
+				viewer.findFile(viewer, (JTextComponent)e.getSource(), e.getPoint());
 			} else if (thirdButton(e)) {
-				executeCommand(new OberContext(e, (JTextComponent)e.getSource(), OberViewer.this));
+				viewer.executeCommand(new OberContext(e, (JTextComponent)e.getSource(), viewer));
 			}
 		}
 		public void mousePressed(MouseEvent e) {
 			if (firstButton(e)) {
-				for (int i = 0; i < comp.getOldMouseListeners().size(); i++) {
-					((MouseListener)comp.getOldMouseListeners().get(i)).mousePressed(e);
+				for (int i = 0; i < oldMouseListeners.size(); i++) {
+					((MouseListener)oldMouseListeners.get(i)).mousePressed(e);
 				}
 			}
 		}
 		public void mouseReleased(MouseEvent e) {
 			if (firstButton(e)) {
-				for (int i = 0; i < comp.getOldMouseListeners().size(); i++) {
-					((MouseListener)comp.getOldMouseListeners().get(i)).mouseReleased(e);
+				for (int i = 0; i < oldMouseListeners.size(); i++) {
+					((MouseListener)oldMouseListeners.get(i)).mouseReleased(e);
 				}
 			}
 		}
+		public void mouseEntered(MouseEvent e) {
+			for (int i = 0; i < oldMouseListeners.size(); i++) {
+				((MouseListener)oldMouseListeners.get(i)).mouseEntered(e);
+			}
+		}
+		public void mouseExited(MouseEvent e) {
+			for (int i = 0; i < oldMouseListeners.size(); i++) {
+				((MouseListener)oldMouseListeners.get(i)).mouseExited(e);
+			}
+		}
+		public void keyTyped(KeyEvent e) {
+			for (int i = 0; i < oldKeyListeners.size(); i++) {
+				((KeyListener)oldKeyListeners.get(i)).keyTyped(e);
+			}
+		}
+		public void keyPressed(KeyEvent e) {
+			if (!viewer.handleKey(e)) {
+				for (int i = 0; i < oldKeyListeners.size(); i++) {
+					((KeyListener)oldKeyListeners.get(i)).keyPressed(e);
+				}
+			}
+		}
+		public void keyReleased(KeyEvent e) {
+			for (int i = 0; i < oldKeyListeners.size(); i++) {
+				((KeyListener)oldKeyListeners.get(i)).keyReleased(e);
+			}
+		}
+		public void addMouseListener(MouseListener l) {
+			oldMouseListeners.add(l);
+		}
+		public void removeMouseListener(MouseListener l) {
+			oldMouseListeners.remove(l);
+		}
+		public void addKeyListener(KeyListener l) {
+			oldKeyListeners.add(l);
+		}
+		public void removeKeyListener(KeyListener l) {
+			oldKeyListeners.remove(l);
+		}
 	}
 
-	public static class Tag extends JTextField implements AdaptedComponent {
-		protected ArrayList oldMouseListeners;
+	public static class Tag extends JTextField {
+		protected ViewerEventAdaptor eventAdaptor;
 
 		public Tag(OberViewer viewer) {
 			super();
-			if (oldMouseListeners == null) {
-				oldMouseListeners = new ArrayList();
+			getEventAdaptor().setViewer(viewer);
+		}
+		public ViewerEventAdaptor getEventAdaptor() {
+			if (eventAdaptor == null) {
+				eventAdaptor = new ViewerEventAdaptor();
+				super.addMouseListener(eventAdaptor);
+				super.addKeyListener(eventAdaptor);
 			}
-			super.addMouseListener(viewer.createMouseAdapter(this));
+			return eventAdaptor;
 		}
 		public void addMouseListener(MouseListener l) {
-			if (oldMouseListeners == null) {
-				oldMouseListeners = new ArrayList();
-			}
-			oldMouseListeners.add(l);
+			getEventAdaptor().addMouseListener(l);
 		}
-		public ArrayList getOldMouseListeners() {
-			return oldMouseListeners;
+		public synchronized void removeMouseListener(MouseListener l) {
+			getEventAdaptor().removeMouseListener(l);
 		}
 	}
 
-	public static class AdaptedTextPane extends JTextPane implements AdaptedComponent {
-		protected ArrayList oldMouseListeners;
+	public static class AdaptedTextPane extends JTextPane {
+		protected ViewerEventAdaptor eventAdaptor;
 
 		public AdaptedTextPane(OberViewer viewer) {
 			super();
-			if (oldMouseListeners == null) {
-				oldMouseListeners = new ArrayList();
+			getEventAdaptor().setViewer(viewer);
+		}
+		public ViewerEventAdaptor getEventAdaptor() {
+			if (eventAdaptor == null) {
+				eventAdaptor = new ViewerEventAdaptor();
+				super.addMouseListener(eventAdaptor);
+				super.addKeyListener(eventAdaptor);
 			}
-			super.addMouseListener(viewer.createMouseAdapter(this));
+			return eventAdaptor;
 		}
 		public void addMouseListener(MouseListener l) {
-			if (oldMouseListeners == null) {
-				oldMouseListeners = new ArrayList();
-			}
-			oldMouseListeners.add(l);
+			getEventAdaptor().addMouseListener(l);
 		}
-		public ArrayList getOldMouseListeners() {
-			return oldMouseListeners;
+		public synchronized void removeMouseListener(MouseListener l) {
+			getEventAdaptor().removeMouseListener(l);
 		}
 	}
 	
@@ -236,9 +278,6 @@ public class OberViewer {
 		component = comp;
 		wrapper.add(compWrapper, BorderLayout.CENTER);
 	}
-	public MouseListener createMouseAdapter(AdaptedComponent comp) {
-		return new ViewerMouseAdapter(comp);
-	}
 	public void newFocus(Component c) {
 		if (active && (c == null || !wrapper.isAncestorOf(c))) {
 			active = false;
@@ -249,6 +288,9 @@ public class OberViewer {
 			(type == VIEWER_TYPE ? (JComponent)wrapper : tagPanel).setBorder(BorderFactory.createLineBorder(Color.RED));
 			ober.activated(this);
 		}
+	}
+	public boolean handleKey(KeyEvent e) {
+		return ober.handleKey(this, e);
 	}
 	public void executeCommand(OberContext ctx) {
 		if (!ctx.getArguments().isEmpty()) {
