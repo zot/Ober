@@ -194,7 +194,7 @@ public class OberViewer implements PropertyChangeListener {
 	public static final String VIEWER_NAME = "^[a-zA-Z0-9_]+(?=:)";
 	public static final Pattern VIEWER_NAME_PATTERN = Pattern.compile(VIEWER_NAME);
 	//public static final String ARG = "(?<=^|[^a-zA-Z0-9_<>|!.:$])[a-zA-Z0-9_<>|!.:$]+(?=[^a-zA-Z0-9_<>|!.:$]|$)|\\[";
-	public static final String ARG = "([a-zA-Z0-9_<>|!.:$/]|\\\\\\[)+|\\[";
+	public static final String ARG = "([-a-zA-Z0-9_<>|!.:$/]|\\\\\\[)+|\\[";
 	public static final Pattern ARG_PATTERN = Pattern.compile(ARG);
 	public static final String FILE = "((?:[a-zA-Z]+://(?:[a-zA-Z0-9._\\-]+(?:(?::[a-zA-Z0-9._\\-]+)?@[a-zA-Z0-9._\\-]+)?)?)?)((?:[a-zA-Z]:)?[a-zA-Z0-9./\\\\_\\-:]+)(?:[^a-zA-Z0-9./\\\\_\\-:]|$)";
 	public static final Pattern FILE_PATTERN = Pattern.compile(FILE);
@@ -338,13 +338,8 @@ public class OberViewer implements PropertyChangeListener {
 		msg("Errors", msg);
 	}
 	protected void msg(String name, String msg) {
-		OberViewer v = topViewer().findViewerNamed(name);
-		
-		if (v == null) {
-			v = ober.createTextViewer();
-			v.setName(name);
-			topViewer().acceptViewer(v);
-		}
+		OberViewer v = topViewer().findOrCreateViewerNamed(name);
+
 		JTextPane text = (JTextPane)v.getComponent();
 		msg += "\n";
 		try {
@@ -355,6 +350,16 @@ public class OberViewer implements PropertyChangeListener {
 	}
 	public OberViewer topViewer() {
 		return type == MAIN_TYPE ? this : parentViewer == null ? null : parentViewer.topViewer();
+	}
+	protected OberViewer findOrCreateViewerNamed(String name)  {
+		OberViewer v = findViewerNamed(name);
+		
+		if (v == null)  {
+			v = ober.createTextViewer();
+			v.setName(name);
+			topViewer().acceptViewer(v);
+		}
+		return v;
 	}
 	protected OberViewer findViewerNamed(String string) {
 		if (getName().equals(string)) {

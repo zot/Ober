@@ -23,6 +23,7 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,6 +35,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextPane;
 import javax.swing.text.JTextComponent;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
 
 import ognl.Node;
 import ognl.Ognl;
@@ -41,29 +45,110 @@ import ognl.Ognl;
 public class Ober implements PropertyChangeListener {
 	protected ArrayList viewers = new ArrayList();
 	protected OberViewer activeViewer;
-	protected HashMap commands = new HashMap();
 	protected HashMap properties = new HashMap();
 	protected HashMap namespaces = new HashMap();
-	protected HashMap keybindings = new HashMap();
 	protected HashSet boundKeys = new HashSet();
 	
 	public static final Color MAIN_COLOR = Color.WHITE;
 	public static final Color TRACK_COLOR = new Color((float)0.8, (float)1, (float)1);
 	public static final Color VIEWER_COLOR = new Color((float)0.8, (float)0.8, (float)0.8);
 	public static final String VERSION = "0.9.4";
+	public static final String ENV_OBERVAR = "OBER";
+	public static final String ENV_TRUE = "TRUE";
+	public static final StyleContext STYLE_CONTEXT = new StyleContext();
+	public static final Style BOLD = STYLE_CONTEXT.addStyle("BOLD", null);
+	
+	static {
+		StyleConstants.setBold(BOLD, true);
+	}
 	
 	public static void main(String args[]) {
 		Ober ober = new Ober();
 		OberViewer main = ober.createMain();
 
-		ober.help(main);
 		ober.createFrame(main).setVisible(true);
+		ober.help(main);
 	}
 	public Ober() {
 		initialize();
 	}
 	public HashMap getProperties() {
 		return properties;
+	}
+	public void executeShellCommand(final OberContext ctx)  {
+		OberViewer viewer = getActiveViewer();
+		final JTextPane text = (JTextPane)viewer.getComponent();
+		File dir;
+			
+		try  {
+			dir = new File(viewer.getFilename()[1]);
+			if (!dir.isDirectory())  {
+				dir = dir.getParentFile();
+			}
+		} catch (Exception ex) {
+			dir = new File(".");
+		}
+		try {
+			final boolean atEnd = text.getCaretPosition() == text.getDocument().getLength();
+			int start = ctx.cmdStart;
+			StringBuffer cmd = new StringBuffer();
+
+			if (ctx.getArgument(0).toString().startsWith("!"))  {
+				ctx.nextLine();
+				int nl = ctx.nextPosition;
+				int i = 0;
+
+				if (nl == -1)  {
+					nl = text.getDocument().getLength();
+				} else  {
+					nl--;
+				}
+				ctx.findArgs(start);
+				cmd.append(ctx.getArgumentString(i++).substring(1));
+				while (ctx.nextPosition < nl && ctx.nextPosition != -1 && ctx.getArgument(i) != null) {
+					cmd.append(' ');
+					cmd.append(ctx.getArgumentString(i++));
+				}
+			} else {
+				cmd.append(ctx.getArgumentString(0));
+			}
+			if (ctx.nextPosition == -1 || ctx.nextPosition == text.getDocument().getLength())  {
+				text.getDocument().insertString(text.getDocument().getLength(), "\n", null);
+			} else  {
+				text.getDocument().insertString(text.getDocument().getLength(), cmd.toString() + "\n", BOLD);
+			}
+			int pos = text.getDocument().getLength();
+			
+			final Process proc = Runtime.getRuntime().exec(cmd.toString(), new String[] {ENV_OBERVAR, ENV_TRUE}, dir);
+			
+			new Thread() {
+				public void run() {
+					InputStream in = proc.getInputStream();
+					byte buf[] = new byte[1024];
+					int count;
+					
+					try {
+						while ((count = in.read(buf)) != -1)  {
+							text.getDocument().insertString(text.getDocument().getLength(), new String(buf, 0, count), null);
+						}
+						text.getDocument().insertString(text.getDocument().getLength(), "\n> !", BOLD);
+						if (atEnd)  {
+							text.setCaretPosition(text.getDocument().getLength());
+						}
+					} catch (Exception e) {
+						ctx.getSourceViewer().error(e);
+					} finally  {
+						try {
+							in.close();
+						} catch (IOException e) {
+							getActiveViewer().error(e);
+						}
+					}
+				}
+			}.start();
+		} catch (Exception e) {
+			ctx.getSourceViewer().error(e);
+		}
 	}
 	public void help(OberViewer sourceViewer) {
 		OberViewer tv = createTextViewer();
@@ -74,62 +159,15 @@ public class Ober implements PropertyChangeListener {
 			"\t/tmp\n\n" +			"AVAILABLE COMMANDS");
 
 		ArrayList spaces = new ArrayList();
-		for (Iterator i = namespaces.values().iterator(); i.hasNext(); ) {
-			ArrayList inh = new ArrayList((ArrayList)i.next());
-			StringBuffer inhRev = new StringBuffer();
-			
-			for (int j = inh.size(); j-- > 0; ) {
-				if (j < inh.size() - 1) {
-					inhRev.append(",");
-				}
-				inhRev.append(inh.get(j));
-			}
-			spaces.add(inhRev.toString());
+		for (Iterator i = namespaces.keySet().iterator(); i.hasNext(); ) {
+			String name = (String) i.next();
+			OberNamespace ns = (OberNamespace)namespaces.get(name);
+
+			spaces.add(ns);
 		}
 		Collections.sort(spaces);
-		ArrayList cmd = new ArrayList(commands.keySet());
-		Collections.sort(cmd);
 		for (int space = 0; space < spaces.size(); space++) {
-			boolean started = false;
-			String inhString = (String)spaces.get(space);
-			String spaceName = inhString.substring(inhString.lastIndexOf(',') + 1);
-			String spaceNameDot = spaceName + ".";
-			ArrayList inh = (ArrayList) namespaces.get(spaceName);
-
-			buf.append("\nNamespace: ");
-			buf.append(spaceName);
-			buf.append(" path: ");
-			for (int j = 1; j < inh.size(); j++) {
-				if (j > 1) {
-					buf.append(", ");
-				}
-				buf.append(inh.get(j));
-			}
-			buf.append('\n');
-			for (int i = 0; i < cmd.size(); i++) {
-				String command = (String) cmd.get(i);
-				if (!command.startsWith(spaceNameDot)) {
-					if (!started) {
-						continue;
-					} else {
-						break;
-					}
-				}
-				started = true;
-				buf.append("   ");
-				buf.append(command);
-				buf.append(((OberCommand)commands.get(command)).getDescription());
-				buf.append('\n');
-			}
-		}
-		buf.append("\nKey Bindings:\n");
-		ArrayList keys = new ArrayList(keybindings.keySet());
-		Collections.sort(keys);
-		for (int i = 0; i < keys.size(); i++) {
-			buf.append("   ");
-			buf.append(keys.get(i));
-			buf.append(((OberCommand)keybindings.get(keys.get(i))).getDescription());
-			buf.append('\n');
+			((OberNamespace)spaces.get(space)).help(buf);
 		}
 		((JTextPane)tv.component).setText(buf.toString());
 		sourceViewer.topViewer().acceptViewer(tv);
@@ -144,6 +182,11 @@ public class Ober implements PropertyChangeListener {
 			public void execute(OberContext ctx) {
 				ctx.beginningOfLine();
 				executeCommand(ctx);
+			}
+		});
+		setDefaultCommand("System", new OberCommand(" -- execute a shell command.") {
+			public void execute(OberContext ctx) throws Exception {
+				executeShellCommand(ctx);
 			}
 		});
 		addCommand("System.Help", new OberCommand(" -- Show help on commands for a viewer.") {
@@ -306,17 +349,21 @@ public class Ober implements PropertyChangeListener {
 	}
 	public void addNamespace(String space, String[] path) {
 		ArrayList l = new ArrayList();
+		OberNamespace namespace = null;
+		OberNamespace system = (OberNamespace) namespaces.get("System");
 		
-		l.add(space);
 		for (int i = 0; i < path.length; i++) {
-			if (!l.contains(path[i])) {
-				l.add(path[i]);
+			OberNamespace ns = (OberNamespace) namespaces.get(path[i]);
+			
+			if (ns != null && !l.contains(path[i])) {
+				l.add(ns);
 			}
 		}
-		if (!l.contains("System")) {
-			l.add("System");
+		if (system != null && !l.contains(system)) {
+			l.add(system);
 		}
-		namespaces.put(space, l);
+		namespace = new OberNamespace(space, (OberNamespace [])l.toArray(new OberNamespace[0]));
+		namespaces.put(space, namespace);
 	}
 	public OberViewer getFocus() {
 		return activeViewer;
@@ -365,35 +412,30 @@ public class Ober implements PropertyChangeListener {
 	}
 	public void executeCommand(OberContext ctx) {
 		if (ctx.getArgumentString(0) != null) {
-			String prefix = ctx.getSourceViewer().getName();
-			String cmdName = ctx.getArgumentString(0);
-			OberCommand cmd = getCommand(cmdName);
+			String cmdParts[] = ctx.getArgumentString(0).split("\\.");
+			OberNamespace namespace = null;
+			
+			try {
+				if (cmdParts.length == 2) {
+					((OberNamespace)namespaces.get(cmdParts[0])).executeFullyqualifiedCommand(cmdParts[0], cmdParts[1], ctx);
+				} else if (cmdParts.length == 1){
+					String namespaceName = ctx.getSourceViewer().getName();
 				
-			if (prefix != null) {
-				ArrayList path = (ArrayList)namespaces.get(prefix);
-
-				if (path == null && cmd == null) {
-					cmd = getCommand("System." + cmdName);
-				} else {
-					for (int i = 0; cmd == null && i < path.size(); i++) {
-						cmd = getCommand(path.get(i) + "." + cmdName);
+					if (namespaceName != null && (OberNamespace)namespaces.get(namespaceName) != null) {
+						((OberNamespace)namespaces.get(namespaceName)).executeCommand(cmdParts[0], ctx);
+					} else {
+						((OberNamespace)namespaces.get("System")).executeCommand(cmdParts[0], ctx);
 					}
+				} else {
+					ctx.getSourceViewer().error("Badly formed command: '" + ctx.getArgumentString(0) + "'");
 				}
-			}
-			if (cmd != null) {
-				try {
-					cmd.execute(ctx);
-				} catch (Exception ex) {
-					ctx.getSourceViewer().error("Error executing command: " + ctx.getCommandString());
-					ctx.getSourceViewer().error(ex);
-				}
-			} else {
-				ctx.getSourceViewer().error("No command called '" + cmdName + "'");
+			} catch (Exception ex) {
+				ctx.getSourceViewer().error(ex);
 			}
 		}
 	}
-	public OberCommand getCommand(String cmdName) {
-		return (OberCommand)commands.get(cmdName);
+	public void setDefaultCommand(String name, OberCommand cmd)  {
+		((OberNamespace)namespaces.get(name)).defaultCommand = cmd;
 	}
 	public void addCommand(String name, OberCommand cmd) {
 		String parts[] = name.split("\\.");
@@ -404,13 +446,14 @@ public class Ober implements PropertyChangeListener {
 		if (namespaces.get(parts[0]) == null) {
 			throw new RuntimeException("Illegal namespace: " + parts[0]);
 		}
-		commands.put(name, cmd);
+		((OberNamespace)namespaces.get(parts[0])).addCommand(parts[1], cmd);
 	}
 
 	public OberViewer createMain() {
 		OberViewer v = new OberViewer(OberViewer.MAIN_TYPE, this);
 		JPanel panel = new JPanel();
 	
+		panel.setSize(200, 200);
 		v.tagPanel.remove(v.dragger);
 		panel.setLayout(new OberLayout(v, false));
 		v.setComponent(panel, panel);
@@ -462,27 +505,19 @@ public class Ober implements PropertyChangeListener {
 	public boolean handleKey(OberViewer viewer, KeyEvent e) {
 		if (boundKeys.contains(new Integer(e.getKeyCode()))) {
 			String evt = eventString(e.getModifiersEx(), e.getKeyCode());
-			String prefix = viewer.getName();
+			OberNamespace namespace = null;
 			OberCommand cmd = null; 
 				
-			if (prefix != null) {
-				ArrayList path = (ArrayList)namespaces.get(prefix);
-
-				if (path == null && cmd == null) {
-					cmd = (OberCommand)keybindings.get("System." + evt);
-				} else {
-					for (int i = 0; cmd == null && i < path.size(); i++) {
-						cmd = (OberCommand)keybindings.get(path.get(i) + "." + evt);
-					}
-				}
+			if (viewer.getName() != null) {
+				namespace = (OberNamespace) namespaces.get(viewer.getName());
 			}
-			if (cmd != null) {
-				try {
-					cmd.execute(new OberContext((JTextComponent)e.getSource(), viewer, ((JTextComponent)e.getSource()).getCaretPosition()));
-				} catch (Exception ex) {
-					viewer.error(ex);
-				}
-				return true;
+			if (namespace == null) {
+				namespace = (OberNamespace) namespaces.get("System");
+			}
+			try {
+				return namespace.handleKey(evt, new OberContext((JTextComponent)e.getSource(), viewer, ((JTextComponent)e.getSource()).getCaretPosition()));
+			} catch (Exception ex) {
+				viewer.error(ex);
 			}
 		}
 		return false;
@@ -496,8 +531,8 @@ public class Ober implements PropertyChangeListener {
 		evt.append(KeyEvent.getKeyText(keyCode));
 		return evt.toString();
 	}
-	public void bindKey(String mode, int modifiersEx, int keyCode, OberCommand cmd) {
+	public void bindKey(String namespace, int modifiersEx, int keyCode, OberCommand cmd) {
 		boundKeys.add(new Integer(keyCode));
-		keybindings.put(mode + "." + eventString(modifiersEx, keyCode), cmd);
+		((OberNamespace)namespaces.get(namespace)).addKeybinding(eventString(modifiersEx, keyCode), cmd);
 	}
 }

@@ -201,9 +201,10 @@ public class OberLayout implements LayoutManager2 {
 		child.setParentViewer(viewer);
 	}
 	public void setPosition(OberViewer viewer, Point point) {
-		float position = vertical ? point.y / (float)viewer.getWrapper().getParent().getHeight() : point.x / (float)viewer.getWrapper().getParent().getWidth();
-
+		setPosition(viewer, vertical ? point.y / (float)viewer.getWrapper().getParent().getHeight() : point.x / (float)viewer.getWrapper().getParent().getWidth());
+	}
+	public void setPosition(OberViewer viewer, float pos)  {
 		removeLayoutComponent(viewer.getWrapper());
-		addLayoutComponent(viewer.getWrapper(), new Float(position));
+		addLayoutComponent(viewer.getWrapper(), new Float(pos));
 	}
 }

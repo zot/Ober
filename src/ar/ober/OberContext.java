@@ -55,8 +55,9 @@ public class OberContext {
 				do {
 					arg = fetchArg(count);
 				} while (nextPosition <= loc);
-				if (nextPosition - count[0] < loc) {
+				if (nextPosition - count[0] <= loc) {
 					args.add(arg);
+					cmdStart = nextPosition - count[0];
 				}
 				return;
 			}
