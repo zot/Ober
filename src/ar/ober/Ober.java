@@ -52,7 +52,7 @@ public class Ober implements PropertyChangeListener {
 	public static final Color MAIN_COLOR = Color.WHITE;
 	public static final Color TRACK_COLOR = new Color((float)0.8, (float)1, (float)1);
 	public static final Color VIEWER_COLOR = new Color((float)0.8, (float)0.8, (float)0.8);
-	public static final String VERSION = "0.9.4";
+	public static final String VERSION = "0.9.5";
 	public static final String ENV_OBERVAR = "OBER";
 	public static final String ENV_TRUE = "TRUE";
 	public static final StyleContext STYLE_CONTEXT = new StyleContext();
