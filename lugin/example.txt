@@ -2,6 +2,10 @@ Define System.Maximize [" -- maximize "] [@org.eclipse.ui.PlatformUI@getWorkbenc
 Define System.HideEditors [" -- hide editors"] [@org.eclipse.ui.PlatformUI@getWorkbench().getActiveWorkbenchWindow().getActivePage().setEditorAreaVisible(false)]
 Define System.ShowEditors [" -- show editors"] [@org.eclipse.ui.PlatformUI@getWorkbench().getActiveWorkbenchWindow().getActivePage().setEditorAreaVisible(true)]
 
+#Echo [#p = @org.eclipse.jdt.internal.ui.packageview.PackageExplorerPart@getFromActivePerspective(), #i = #p.getViewPartInput(), #a = #i.getAncestor(@org.eclipse.jdt.core.IJavaElement@JAVA_MODEL), #p.getTreeViewer().reveal(#a)]
+
+#Echo [#p = @org.eclipse.jdt.internal.ui.packageview.PackageExplorerPart@getFromActivePerspective(), #i = #p.getViewPartInput(), @java.lang.System@out.println("input = " + #i), (#i instanceof org.eclipse.jdt.core.IJavaElement) ? (@java.lang.System@out.println("project = " + #i.getAncestor(@org.eclipse.jdt.core.IJavaElement@JAVA_PROJECT)), #p.selectAndReveal(#i.getAncestor(@org.eclipse.jdt.core.IJavaElement@JAVA_PROJECT))) : "duh"]
+
 # Maximize
 # HideEditors
 # ShowEditors

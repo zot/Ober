@@ -20,11 +20,21 @@ public class OberSwtGui extends OberGui {
 		return new OberSwtViewer();
 	}
 	public String eventString(Object event) {
-		return swtEventString(((Event)event).stateMask, ((Event)event).keyCode);
+		return swtEventString(((Event)event).stateMask, ((Event)event).character);
 	}
 	public String swtEventString(int modifiers, int keycode) {
 		StringBuffer buf = new StringBuffer();
-		
+
+		switch (keycode) {
+			case '\r':
+			case '\b':
+				break;
+			default:
+				if (Character.isISOControl((char)keycode)) {
+					modifiers |= SWT.CONTROL;
+					keycode += 'A' - 1;
+				}
+		}
 		for (int i = 1; (modifiers & SWT.MODIFIER_MASK) != 0; i <<= 1) {
 			if ((i & modifiers) != 0) {
 				switch (i) {
